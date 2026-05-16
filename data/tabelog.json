@@ -1,0 +1,20 @@
+[
+  {
+    "name": "焼肉大将",
+    "phone": "0312345678",
+    "address": "東京都渋谷区道玄坂1丁目2番3号",
+    "lat": 35.65801,
+    "lng": 139.70101,
+    "url": "https://tabelog.com/1",
+    "source": "tabelog"
+  },
+  {
+    "name": "さくら",
+    "phone": "03-1111-2222",
+    "address": "東京都渋谷区道玄坂1-5-5 渋谷ビル2F",
+    "lat": 35.65705,
+    "lng": 139.70305,
+    "url": "https://tabelog.com/2",
+    "source": "tabelog"
+  }
+]

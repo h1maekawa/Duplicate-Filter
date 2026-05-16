@@ -1,0 +1,373 @@
+{
+  "summary": {
+    "inputCount": 5,
+    "normalizedCount": 5,
+    "chainExcludedCount": 1,
+    "duplicateClusterCount": 2,
+    "mergedCount": 2,
+    "outputCount": 2
+  },
+  "stores": [
+    {
+      "storeId": "dcec34107fe022305c32",
+      "name": "焼肉 大将 渋谷店",
+      "normalizedName": "焼肉大将",
+      "phone": "03-1234-5678",
+      "normalizedPhone": "0312345678",
+      "address": "東京都渋谷区道玄坂1-2-3",
+      "normalizedAddress": "東京都渋谷区道玄坂1-2-3",
+      "lat": 35.658,
+      "lng": 139.701,
+      "url": "https://google.com/1",
+      "sources": [
+        "google",
+        "tabelog"
+      ],
+      "isChain": false,
+      "duplicateChecked": true,
+      "duplicateScore": 210,
+      "logs": [
+        {
+          "stage": "normalize",
+          "code": "normalized_record",
+          "message": "正規化を実行",
+          "meta": {
+            "rawName": "焼肉 大将 渋谷店",
+            "normalizedName": "焼肉大将",
+            "rawPhone": "03-1234-5678",
+            "normalizedPhone": "0312345678",
+            "rawAddress": "東京都渋谷区道玄坂1-2-3",
+            "normalizedAddress": "東京都渋谷区道玄坂1-2-3"
+          },
+          "timestamp": "2026-05-15T13:40:53.056Z"
+        },
+        {
+          "stage": "duplicate",
+          "code": "duplicate_match",
+          "message": "重複候補として採用",
+          "meta": {
+            "againstRecordIndex": 3,
+            "reasons": [
+              "phone_match",
+              "distance_1m",
+              "name_similarity_100",
+              "address_similarity_100"
+            ]
+          },
+          "score": 210,
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "normalize",
+          "code": "normalized_record",
+          "message": "正規化を実行",
+          "meta": {
+            "rawName": "焼肉大将",
+            "normalizedName": "焼肉大将",
+            "rawPhone": "0312345678",
+            "normalizedPhone": "0312345678",
+            "rawAddress": "東京都渋谷区道玄坂1丁目2番3号",
+            "normalizedAddress": "東京都渋谷区道玄坂1-2-3"
+          },
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "duplicate",
+          "code": "duplicate_match",
+          "message": "重複候補として採用",
+          "meta": {
+            "againstRecordIndex": 0,
+            "reasons": [
+              "phone_match",
+              "distance_1m",
+              "name_similarity_100",
+              "address_similarity_100"
+            ]
+          },
+          "score": 210,
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "merge",
+          "code": "cluster_merged",
+          "message": "重複クラスタを統合",
+          "meta": {
+            "clusterSize": 2,
+            "primaryRecordIndex": 0,
+            "sources": [
+              "google",
+              "tabelog"
+            ]
+          },
+          "score": 210,
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "output",
+          "code": "output_ready",
+          "message": "JSON出力レコード生成完了",
+          "meta": {
+            "storeId": "dcec34107fe022305c32"
+          },
+          "timestamp": "2026-05-15T13:40:53.058Z"
+        }
+      ],
+      "createdAt": "2026-05-15T13:40:53.058Z",
+      "rawRecords": [
+        {
+          "source": "google",
+          "name": "焼肉 大将 渋谷店",
+          "address": "東京都渋谷区道玄坂1-2-3",
+          "phone": "03-1234-5678",
+          "url": "https://google.com/1"
+        },
+        {
+          "source": "tabelog",
+          "name": "焼肉大将",
+          "address": "東京都渋谷区道玄坂1丁目2番3号",
+          "phone": "0312345678",
+          "url": "https://tabelog.com/1"
+        }
+      ]
+    },
+    {
+      "storeId": "a9a41abaa26e7f9346f9",
+      "name": "居酒屋 さくら",
+      "normalizedName": "居酒屋さくら",
+      "phone": "03-1111-2222",
+      "normalizedPhone": "0311112222",
+      "address": "東京都渋谷区道玄坂1-5-5",
+      "normalizedAddress": "東京都渋谷区道玄坂1-5-5",
+      "lat": 35.657,
+      "lng": 139.703,
+      "url": "https://google.com/3",
+      "sources": [
+        "google",
+        "tabelog"
+      ],
+      "isChain": false,
+      "duplicateChecked": true,
+      "duplicateScore": 170,
+      "logs": [
+        {
+          "stage": "normalize",
+          "code": "normalized_record",
+          "message": "正規化を実行",
+          "meta": {
+            "rawName": "居酒屋 さくら",
+            "normalizedName": "居酒屋さくら",
+            "rawPhone": "03-1111-2222",
+            "normalizedPhone": "0311112222",
+            "rawAddress": "東京都渋谷区道玄坂1-5-5",
+            "normalizedAddress": "東京都渋谷区道玄坂1-5-5"
+          },
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "duplicate",
+          "code": "duplicate_match",
+          "message": "重複候補として採用",
+          "meta": {
+            "againstRecordIndex": 4,
+            "reasons": [
+              "phone_match",
+              "distance_7m",
+              "address_similarity_100"
+            ]
+          },
+          "score": 170,
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "normalize",
+          "code": "normalized_record",
+          "message": "正規化を実行",
+          "meta": {
+            "rawName": "さくら",
+            "normalizedName": "さくら",
+            "rawPhone": "03-1111-2222",
+            "normalizedPhone": "0311112222",
+            "rawAddress": "東京都渋谷区道玄坂1-5-5 渋谷ビル2F",
+            "normalizedAddress": "東京都渋谷区道玄坂1-5-5"
+          },
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "duplicate",
+          "code": "duplicate_match",
+          "message": "重複候補として採用",
+          "meta": {
+            "againstRecordIndex": 2,
+            "reasons": [
+              "phone_match",
+              "distance_7m",
+              "address_similarity_100"
+            ]
+          },
+          "score": 170,
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "merge",
+          "code": "cluster_merged",
+          "message": "重複クラスタを統合",
+          "meta": {
+            "clusterSize": 2,
+            "primaryRecordIndex": 2,
+            "sources": [
+              "google",
+              "tabelog"
+            ]
+          },
+          "score": 170,
+          "timestamp": "2026-05-15T13:40:53.058Z"
+        },
+        {
+          "stage": "output",
+          "code": "output_ready",
+          "message": "JSON出力レコード生成完了",
+          "meta": {
+            "storeId": "a9a41abaa26e7f9346f9"
+          },
+          "timestamp": "2026-05-15T13:40:53.058Z"
+        }
+      ],
+      "createdAt": "2026-05-15T13:40:53.058Z",
+      "rawRecords": [
+        {
+          "source": "google",
+          "name": "居酒屋 さくら",
+          "address": "東京都渋谷区道玄坂1-5-5",
+          "phone": "03-1111-2222",
+          "url": "https://google.com/3"
+        },
+        {
+          "source": "tabelog",
+          "name": "さくら",
+          "address": "東京都渋谷区道玄坂1-5-5 渋谷ビル2F",
+          "phone": "03-1111-2222",
+          "url": "https://tabelog.com/2"
+        }
+      ]
+    }
+  ],
+  "chainExcluded": [
+    {
+      "recordIndex": 1,
+      "rawName": "鳥貴族 渋谷店",
+      "normalizedName": "鳥貴族",
+      "rawPhone": "03-8888-8888",
+      "normalizedPhone": "0388888888",
+      "rawAddress": "東京都渋谷区道玄坂2-2-2",
+      "normalizedAddress": "東京都渋谷区道玄坂2-2-2",
+      "lat": 35.659,
+      "lng": 139.702,
+      "url": "https://google.com/2",
+      "normalizedUrl": "https://google.com/2",
+      "source": "google",
+      "raw": {
+        "name": "鳥貴族 渋谷店",
+        "phone": "03-8888-8888",
+        "address": "東京都渋谷区道玄坂2-2-2",
+        "lat": 35.659,
+        "lng": 139.702,
+        "url": "https://google.com/2",
+        "source": "google"
+      },
+      "logs": [
+        {
+          "stage": "normalize",
+          "code": "normalized_record",
+          "message": "正規化を実行",
+          "meta": {
+            "rawName": "鳥貴族 渋谷店",
+            "normalizedName": "鳥貴族",
+            "rawPhone": "03-8888-8888",
+            "normalizedPhone": "0388888888",
+            "rawAddress": "東京都渋谷区道玄坂2-2-2",
+            "normalizedAddress": "東京都渋谷区道玄坂2-2-2"
+          },
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "chain",
+          "code": "chain_exact",
+          "message": "チェーン店完全一致",
+          "meta": {
+            "matchedChainName": "鳥貴族"
+          },
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        },
+        {
+          "stage": "exclude",
+          "code": "excluded_chain",
+          "message": "チェーン店として除外",
+          "meta": {
+            "matchedChainName": "鳥貴族",
+            "matchType": "exact"
+          },
+          "timestamp": "2026-05-15T13:40:53.057Z"
+        }
+      ],
+      "chainDecision": {
+        "isChain": true,
+        "matchedChainName": "鳥貴族",
+        "matchType": "exact",
+        "reasons": [
+          "normalized_exact_match"
+        ]
+      }
+    }
+  ],
+  "duplicateMatches": [
+    {
+      "leftIndex": 0,
+      "rightIndex": 3,
+      "evaluation": {
+        "pairKey": "0:3",
+        "duplicate": true,
+        "score": 210,
+        "reasons": [
+          "phone_match",
+          "distance_1m",
+          "name_similarity_100",
+          "address_similarity_100"
+        ],
+        "nameSimilarity": 1,
+        "addressSimilarity": 1,
+        "distanceMeters": 1.43,
+        "matchedOn": {
+          "phone": true,
+          "distance": true,
+          "name": true,
+          "url": false,
+          "address": true
+        }
+      }
+    },
+    {
+      "leftIndex": 2,
+      "rightIndex": 4,
+      "evaluation": {
+        "pairKey": "2:4",
+        "duplicate": true,
+        "score": 170,
+        "reasons": [
+          "phone_match",
+          "distance_7m",
+          "address_similarity_100"
+        ],
+        "nameSimilarity": 0.5,
+        "addressSimilarity": 1,
+        "distanceMeters": 7.16,
+        "matchedOn": {
+          "phone": true,
+          "distance": true,
+          "name": false,
+          "url": false,
+          "address": true
+        }
+      }
+    }
+  ]
+}
