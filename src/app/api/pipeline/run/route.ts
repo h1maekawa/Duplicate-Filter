@@ -3,6 +3,7 @@ import { runRestaurantPipeline } from '../../../../lib/restaurant-pipeline/pipel
 import chainData from '../../../../../data/chains.json';
 
 // Cloudflare Edge Runtime を指定
+// Deployment Trigger: Build Refresh v2
 export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
