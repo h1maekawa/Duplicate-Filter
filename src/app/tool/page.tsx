@@ -26,7 +26,7 @@ export default function PipelinePage() {
     formData.append('removeBusinessWords', String(removeBusinessWords));
 
     try {
-      const res = await fetch('/api/pipeline/run', {
+      const res = await fetch('/api/pipeline/execute', {
         method: 'POST',
         body: formData,
       });
