@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parse } from 'csv-parse/sync';
 import { runRestaurantPipeline } from '../../../../lib/restaurant-pipeline/pipeline';
-import type { PipelineInputRecord } from '../../../../lib/restaurant-pipeline/types';
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import defaultChains from '../../../../../data/chains.json';
 
-// Cloudflareデプロイ時は 'edge' に変更しますが、ローカル開発用に一旦コメントアウトします
-// export const runtime = 'edge';
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,15 +14,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ファイルが選択されていません。' }, { status: 400 });
     }
 
-    // チェーン店リストのロード
-      return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
-    }
-
     const allRecords: any[] = [];
 
     for (const file of files) {
       const text = await file.text();
       const rows = text.split('\n').filter(line => line.trim());
+      if (rows.length < 1) continue;
+
       const headers = rows[0].split(',').map(h => h.trim());
 
       for (let i = 1; i < rows.length; i++) {
@@ -39,7 +33,6 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // パイプライン実行（内蔵の chainNames を使用）
     const result = await runRestaurantPipeline(allRecords, {
       normalize: { removeBusinessWords },
       chainNames: defaultChains as string[],
