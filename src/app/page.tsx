@@ -87,17 +87,17 @@ export default function LandingPage() {
             <h2 style={{ fontSize: '2rem', marginBottom: '1.5rem' }}>Full-Stack Performance</h2>
             <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: '1.8' }}>
               このアプリケーションは、最新の Web テクノロジーを結集して構築されています。
-              Cloudflare Edge Runtime 上で動作し、大規模な CSV 処理も遅延なく実行可能です。
+              大規模な CSV 処理もローカル環境の Node.js サーバーを利用することで、制限なく高速に実行可能です。
               フロントエンドからバックエンドまで、一貫した型安全性と高可用性を実現しています。
             </p>
             <div style={{ display: 'flex', gap: '2rem' }}>
               <div>
-                <strong style={{ display: 'block', fontSize: '1.5rem', color: '#fff' }}>100ms</strong>
-                <span className="summary-label">Average Processing</span>
+                <strong style={{ display: 'block', fontSize: '1.5rem', color: '#fff' }}>Local</strong>
+                <span className="summary-label">Execution Environment</span>
               </div>
               <div>
                 <strong style={{ display: 'block', fontSize: '1.5rem', color: '#fff' }}>100%</strong>
-                <span className="summary-label">Serverless Edge</span>
+                <span className="summary-label">Data Privacy</span>
               </div>
             </div>
           </div>
@@ -105,8 +105,49 @@ export default function LandingPage() {
           <div style={{ flex: '1 1 300px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
             <div className="summary-item" style={{ background: 'rgba(255,255,255,0.05)' }}>Next.js 15</div>
             <div className="summary-item" style={{ background: 'rgba(255,255,255,0.05)' }}>TypeScript</div>
-            <div className="summary-item" style={{ background: 'rgba(255,255,255,0.05)' }}>Cloudflare</div>
+            <div className="summary-item" style={{ background: 'rgba(255,255,255,0.05)' }}>Node.js</div>
             <div className="summary-item" style={{ background: 'rgba(255,255,255,0.05)' }}>SheetJS</div>
+          </div>
+        </div>
+      </section>
+
+      {/* Local Usage Instructions */}
+      <section style={{ backgroundColor: 'rgba(255,255,255,0.02)', padding: '6rem 0' }}>
+        <div className="container">
+          <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
+            <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>How to Use Locally</h2>
+            <p style={{ color: 'var(--text-muted)' }}>安全かつ制限なくデータ処理を行うため、ローカル環境での起動を推奨しています</p>
+          </div>
+
+          <div className="glass-card" style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'left' }}>
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--primary)' }}>1. リポジトリのクローン</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>GitHubからソースコードをダウンロードします。</p>
+              <div style={{ background: '#000', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace', color: '#a5b4fc' }}>
+                git clone https://github.com/h1maekawa/Duplicate-Filter.git<br/>
+                cd Duplicate-Filter
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--primary)' }}>2. 依存関係のインストール</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>Node.js環境が必要です。必要なパッケージをインストールします。</p>
+              <div style={{ background: '#000', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace', color: '#a5b4fc' }}>
+                npm install
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.2rem', marginBottom: '0.5rem', color: 'var(--primary)' }}>3. ローカルサーバーの起動</h3>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>開発用サーバーを起動し、ブラウザでアクセスします。</p>
+              <div style={{ background: '#000', padding: '1rem', borderRadius: '8px', fontFamily: 'monospace', color: '#a5b4fc' }}>
+                npm run dev
+              </div>
+              <p style={{ color: 'var(--text-muted)', marginTop: '1rem', fontSize: '0.9rem' }}>
+                ※ 起動後、ブラウザで <strong>http://localhost:3000</strong> （ポートが使用中の場合は3001等）にアクセスしてください。<br/>
+                ※ 画面内の「ツールを起動する」ボタンから処理を実行できます。
+              </p>
+            </div>
           </div>
         </div>
       </section>

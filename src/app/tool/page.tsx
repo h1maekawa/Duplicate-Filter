@@ -26,7 +26,7 @@ export default function PipelinePage() {
     formData.append('removeBusinessWords', String(removeBusinessWords));
 
     try {
-      const res = await fetch('/api/pipeline/execute', {
+      const res = await fetch('/api/pipeline/process', {
         method: 'POST',
         body: formData,
       });
@@ -200,19 +200,19 @@ export default function PipelinePage() {
 
             <div className="summary-grid">
               <div className="summary-item">
-                <span className="summary-value">{result.summary.inputCount}</span>
+                <span className="summary-value">{result?.summary?.inputCount ?? 0}</span>
                 <span className="summary-label">総入力件数</span>
               </div>
               <div className="summary-item">
-                <span className="summary-value">{result.summary.chainExcludedCount}</span>
+                <span className="summary-value">{result?.summary?.chainExcludedCount ?? 0}</span>
                 <span className="summary-label">チェーン除外</span>
               </div>
               <div className="summary-item">
-                <span className="summary-value">{result.summary.duplicateClusterCount}</span>
+                <span className="summary-value">{result?.summary?.duplicateClusterCount ?? 0}</span>
                 <span className="summary-label">重複クラスタ</span>
               </div>
               <div className="summary-item">
-                <span className="summary-value" style={{ color: '#818cf8' }}>{result.summary.outputCount}</span>
+                <span className="summary-value" style={{ color: '#818cf8' }}>{result?.summary?.outputCount ?? 0}</span>
                 <span className="summary-label">最終出力店舗数</span>
               </div>
             </div>
@@ -230,18 +230,18 @@ export default function PipelinePage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.stores.slice(0, 5).map((s: any, i: number) => (
+                    {result?.stores?.slice(0, 5).map((s: any, i: number) => (
                       <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                        <td style={{ padding: '0.75rem' }}>{s.name}</td>
+                        <td style={{ padding: '0.75rem' }}>{s.name || '名称不明'}</td>
                         <td style={{ padding: '0.75rem' }}>
                           <div style={{ display: 'flex', gap: '4px' }}>
-                            {s.sources.map((src: string, j: number) => (
+                            {(s.sources || []).map((src: string, j: number) => (
                               <span key={j} className="status-badge" style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px' }}>{src}</span>
                             ))}
                           </div>
                         </td>
-                        <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{s.address}</td>
-                        <td style={{ padding: '0.75rem' }}>{s.phone}</td>
+                        <td style={{ padding: '0.75rem', color: 'var(--text-muted)' }}>{s.address || '-'}</td>
+                        <td style={{ padding: '0.75rem' }}>{s.phone || '-'}</td>
                       </tr>
                     ))}
                   </tbody>
