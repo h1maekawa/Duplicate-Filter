@@ -104,6 +104,9 @@ export interface StoreOutputRecord {
     address: string;
     phone: string;
     url: string;
+    area?: string;
+    category?: string;
+    logs?: DecisionLog[];
   }>;
 }
 

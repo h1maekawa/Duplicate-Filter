@@ -86,6 +86,7 @@ export function mergeCluster(
       url: record.url,
       area: record.area,
       category: record.category,
+      logs: record.logs,
     })),
   };
 }

@@ -29,6 +29,8 @@ test('chain matcher should avoid generic words and match known chain', () => {
     url: '',
     normalizedUrl: '',
     source: 'google',
+    area: '',
+    category: '',
     raw: {},
     logs: [],
   } satisfies NormalizedStoreRecord;
@@ -115,6 +117,8 @@ test('evaluateDuplicate should return score log details', () => {
     url: 'https://example.com/a',
     normalizedUrl: 'https://example.com/a',
     source: 'google',
+    area: '',
+    category: '',
     raw: {},
     logs: [],
   };

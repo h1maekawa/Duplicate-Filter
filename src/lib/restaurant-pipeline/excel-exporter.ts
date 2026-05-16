@@ -45,7 +45,7 @@ export function generateExcelBlob(result: PipelineResult): Blob {
           'URL': r.url,
           'ソース': r.source,
           '判定スコア': dupLog?.score || '',
-          '判定理由': dupLog?.meta?.reasons?.join(', ') || '',
+          '判定理由': (dupLog?.meta?.reasons as string[])?.join(', ') || '',
           '統合先店舗ID': store.storeId,
           '統合先店名': store.name
         });
