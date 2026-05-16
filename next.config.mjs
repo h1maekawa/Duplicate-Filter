@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: process.env.BUILD_STATIC === 'true' ? 'export' : undefined,
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {

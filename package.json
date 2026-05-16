@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "pages:build": "npx @cloudflare/next-on-pages",
+    "build:cloudflare": "BUILD_STATIC=true npm run build",
     "pipeline:run": "tsx src/cli/runRestaurantPipeline.ts",
     "pipeline:test": "tsx --test src/lib/restaurant-pipeline/__tests__/pipeline.test.ts"
   },
