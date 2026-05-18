@@ -155,6 +155,26 @@ function toPairRecords(pairKey: string, indexMap: Map<number, NormalizedStoreRec
   return [left, right];
 }
 
+function isRocketNowOrMenu(source: string): boolean {
+  const s = source.toLowerCase();
+  return (
+    s.includes('rocket') ||
+    s.includes('ロケット') ||
+    s.includes('menu') ||
+    s.includes('メニュー')
+  );
+}
+
+function isAeonMall(name: string, address: string): boolean {
+  const normalizedText = (name + ' ' + address).toLowerCase();
+  return (
+    normalizedText.includes('イオンモール') ||
+    normalizedText.includes('aeonmall') ||
+    (normalizedText.includes('aeon') && normalizedText.includes('mall')) ||
+    (normalizedText.includes('イオン') && normalizedText.includes('モール'))
+  );
+}
+
 export async function runRestaurantPipeline(
   inputRecords: PipelineInputRecord[],
   options: PipelineOptions = {},
@@ -167,6 +187,19 @@ export async function runRestaurantPipeline(
   const candidates: NormalizedStoreRecord[] = [];
 
   for (const record of normalizedRecords) {
+    // ロケットナウとメニューの案件に関してはイオンモールを省く
+    if (isRocketNowOrMenu(record.source) && isAeonMall(record.rawName, record.rawAddress)) {
+      record.logs.push(
+        createLog('exclude', 'excluded_aeon_mall', 'イオンモール除外（ロケットナウ・メニュー案件）', {
+          source: record.source,
+          rawName: record.rawName,
+          rawAddress: record.rawAddress,
+        }),
+      );
+      chainExcluded.push(record);
+      continue;
+    }
+
     const chainDecision = chainMatcher.detect(record);
     record.chainDecision = chainDecision;
 

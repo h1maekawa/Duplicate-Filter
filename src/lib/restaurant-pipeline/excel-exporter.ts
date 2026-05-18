@@ -59,6 +59,7 @@ export function generateExcelBlob(result: PipelineResult): Blob {
   const excluded = result?.chainExcluded || [];
   const chainExcludedData = excluded.map(r => {
     const chainLog = r.logs?.find(l => l.code === 'excluded_chain');
+    const aeonLog = r.logs?.find(l => l.code === 'excluded_aeon_mall');
     return {
       '店名(生)': r.rawName,
       'エリア': r.area || '',
@@ -68,8 +69,8 @@ export function generateExcelBlob(result: PipelineResult): Blob {
       '住所': r.rawAddress,
       'URL': r.url,
       'ソース': r.source,
-      '該当チェーン名': chainLog?.meta?.matchedChainName || '',
-      '判定タイプ': chainLog?.meta?.matchType || ''
+      '該当チェーン名': chainLog?.meta?.matchedChainName || (aeonLog ? 'イオンモール' : ''),
+      '判定タイプ': chainLog?.meta?.matchType || (aeonLog ? 'イオンモール除外' : '')
     };
   });
   const wsChain = XLSX.utils.json_to_sheet(chainExcludedData);

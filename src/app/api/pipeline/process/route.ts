@@ -27,6 +27,17 @@ export async function POST(request: NextRequest) {
         const values = rows[i].split(',').map(v => v.trim());
         const record: any = {};
         headers.forEach((h, idx) => { record[h] = values[idx]; });
+        
+        // Find if a source column exists in headers, otherwise fallback to file name
+        const sourceKey = Object.keys(record).find(k => 
+          ['source', '媒体', '媒体名', 'site', 'platform'].includes(k.trim().toLowerCase())
+        );
+        if (sourceKey && record[sourceKey]) {
+          record.source = record[sourceKey];
+        } else {
+          record.source = file.name;
+        }
+        
         records.push(record);
       }
     }

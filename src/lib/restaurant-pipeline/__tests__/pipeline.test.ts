@@ -92,7 +92,7 @@ test('duplicate scoring should prioritize phone number and merge by score', asyn
       scoring: {
         duplicateThreshold: 80,
       },
-      chainDbPath: new URL('../../../../api/masters/chains_master.csv', import.meta.url).pathname,
+      chainDbPath: new URL('../../../../data/chains.json', import.meta.url).pathname,
     },
   );
 
@@ -133,3 +133,61 @@ test('evaluateDuplicate should return score log details', () => {
   assert.equal(evaluation.duplicate, true);
   assert.ok(evaluation.reasons.includes('phone_match'));
 });
+
+test('pipeline should exclude Aeon Mall restaurants ONLY for rocketnow and menu projects', async () => {
+  const result = await runRestaurantPipeline([
+    {
+      name: '個人レストラン イオンモール店',
+      address: '千葉県千葉市美浜区豊砂1-1',
+      phone: '043-306-7101',
+      source: 'rocketnow',
+    },
+    {
+      name: 'カフェ メニューテスト',
+      address: '千葉県木更津市築地1-4 イオンモール内',
+      phone: '0438-30-7111',
+      source: 'menu',
+    },
+    {
+      name: '個人レストラン イオンモール店',
+      address: '千葉県船橋市山手1-1-8',
+      phone: '047-495-5020',
+      source: 'google',
+    },
+    {
+      name: 'カフェ ららぽーと店',
+      address: 'ららぽーと若松2-1-1',
+      phone: '047-433-9800',
+      source: 'menu',
+    }
+  ], {
+    chainDbPath: new URL('../../../../data/chains.json', import.meta.url).pathname,
+  });
+
+  // Out of 4 items:
+  // - Item 1: Aeon Mall + rocketnow -> Excluded (1)
+  // - Item 2: Aeon Mall + menu -> Excluded (2)
+  // - Item 3: Aeon Mall + google -> Not excluded (kept in candidates/output)
+  // - Item 4: Lalaport (non-Aeon Mall) + menu -> Not excluded (kept in candidates/output)
+
+  assert.equal(result.summary.inputCount, 4);
+  assert.equal(result.chainExcluded.length, 2);
+  assert.equal(result.stores.length, 2);
+
+  // Check that the excluded records are the correct ones
+  const isAeonExcluded1 = result.chainExcluded.some(
+    r => r.rawName === '個人レストラン イオンモール店' && r.source === 'rocketnow'
+  );
+  const isAeonExcluded2 = result.chainExcluded.some(
+    r => r.rawName === 'カフェ メニューテスト' && r.source === 'menu'
+  );
+
+  assert.ok(isAeonExcluded1);
+  assert.ok(isAeonExcluded2);
+  
+  // Verify that the logs record the exclusion reason
+  const aeonLog = result.chainExcluded[0].logs.find(l => l.code === 'excluded_aeon_mall');
+  assert.ok(aeonLog);
+  assert.equal(aeonLog.message, 'イオンモール除外（ロケットナウ・メニュー案件）');
+});
+
