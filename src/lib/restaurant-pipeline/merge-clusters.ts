@@ -63,7 +63,12 @@ export function mergeCluster(
     ]),
     name: chooseBestString(records, (item) => item.rawName),
     normalizedName,
-    phone: chooseBestString(records, (item) => item.rawPhone),
+    phone: (() => {
+      const rawPhone = chooseBestString(records, (item) => item.rawPhone);
+      const digits = rawPhone.replace(/\D/g, '');
+      if (digits.length !== 10 && digits.length !== 11) return '';
+      return rawPhone;
+    })(),
     normalizedPhone,
     address: chooseBestString(records, (item) => item.rawAddress),
     normalizedAddress: chooseBestString(records, (item) => item.normalizedAddress),

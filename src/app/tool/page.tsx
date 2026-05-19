@@ -90,14 +90,19 @@ export default function PipelinePage() {
     link.click();
   };
 
-  const handleDownloadExcel = () => {
+  const handleDownloadExcel = async () => {
     if (!result) return;
-    const blob = generateExcelBlob(result);
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', getExportFileName('xlsx'));
-    link.click();
+    try {
+      const blob = await generateExcelBlob(result);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', getExportFileName('xlsx'));
+      link.click();
+    } catch (err) {
+      console.error('Excel export error:', err);
+      alert('Excelファイルの生成中にエラーが発生しました。');
+    }
   };
 
   return (

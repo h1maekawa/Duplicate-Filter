@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runRestaurantPipeline } from '../../../../lib/restaurant-pipeline/pipeline';
+import { parse } from 'csv-parse/sync';
 import chainData from '../../../../../data/chains.json';
 
 // export const runtime = 'edge'; // Cloudflare用。ローカル動作優先のため一旦コメントアウト
@@ -19,16 +20,15 @@ export async function POST(request: NextRequest) {
 
     for (const file of files) {
       const text = await file.text();
-      const rows = text.split('\n').filter(l => l.trim());
-      if (rows.length <= 1) continue;
-      
-      const headers = rows[0].split(',').map(h => h.trim());
-      for (let i = 1; i < rows.length; i++) {
-        const values = rows[i].split(',').map(v => v.trim());
-        const record: any = {};
-        headers.forEach((h, idx) => { record[h] = values[idx]; });
-        
-        // Find if a source column exists in headers, otherwise fallback to file name
+      const parsedRecords = parse(text, {
+        bom: true,
+        columns: true,
+        skip_empty_lines: true,
+        trim: true,
+        relax_column_count: true,
+      });
+
+      for (const record of parsedRecords) {
         const sourceKey = Object.keys(record).find(k => 
           ['source', '媒体', '媒体名', 'site', 'platform'].includes(k.trim().toLowerCase())
         );

@@ -1,10 +1,10 @@
-import * as XLSX from 'xlsx';
 import { PipelineResult } from './types';
 
 /**
  * 統合結果をマルチシートの Excel ファイル (.xlsx) として出力するための Blob を生成する
  */
-export function generateExcelBlob(result: PipelineResult): Blob {
+export async function generateExcelBlob(result: PipelineResult): Promise<Blob> {
+  const XLSX = await import('xlsx');
   const wb = XLSX.utils.book_new();
 
   // 1. 統合済み店舗リスト

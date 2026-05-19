@@ -113,8 +113,11 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
 
 export function normalizePhone(value: unknown): string {
   if (value == null) return '';
-  const normalized = nfkc(String(value)).replace(/^\+81/, '0').replace(/\D/g, '');
-  return normalized.trim();
+  const normalized = nfkc(String(value)).replace(/^\+81/, '0').replace(/\D/g, '').trim();
+  if (normalized.length !== 10 && normalized.length !== 11) {
+    return '';
+  }
+  return normalized;
 }
 
 function stripBuildingInfo(value: string): string {
