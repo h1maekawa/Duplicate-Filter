@@ -58,6 +58,17 @@ export function evaluateDuplicate(
     hardBlockReason = 'different_phone_far_distance';
   }
 
+  const phoneMissing = !left.normalizedPhone || !right.normalizedPhone;
+  if (phoneMissing) {
+    const isCloseOrUnknown = distanceMeters == null || distanceMeters <= 15;
+    if (isCloseOrUnknown && nameSimilarity >= 0.90 && addressSimilarity >= 0.90) {
+      if (score < config.duplicateThreshold) {
+        score = config.duplicateThreshold;
+        reasons.push('missing_phone_high_similarity_rescue');
+      }
+    }
+  }
+
   const duplicate = !hardBlockReason && score >= config.duplicateThreshold;
 
   return {

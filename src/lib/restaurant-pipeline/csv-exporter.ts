@@ -8,14 +8,17 @@ export function generateCsvContent(result: PipelineResult): string {
   if (stores.length === 0) return '';
 
   const headers = [
-    'storeId',
     'name',
     'phone',
+    'category',
     'address',
+    'businessHours',
+    'regularHoliday',
+    'url',
+    'source',
+    'storeId',
     'lat',
     'lng',
-    'url',
-    'sources',
     'duplicateScore',
     'isChain',
     'createdAt'
@@ -23,14 +26,17 @@ export function generateCsvContent(result: PipelineResult): string {
 
   const rows = stores.map((store) => {
     return [
-      store.storeId,
       store.name,
       store.phone,
+      store.category ?? '',
       store.address,
-      store.lat ?? '',
-      store.lng ?? '',
+      store.businessHours ?? '',
+      store.regularHoliday ?? '',
       store.url,
       store.sources.join('|'),
+      store.storeId,
+      store.lat ?? '',
+      store.lng ?? '',
       store.duplicateScore,
       store.isChain ? 'true' : 'false',
       store.createdAt

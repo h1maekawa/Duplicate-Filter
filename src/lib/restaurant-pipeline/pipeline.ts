@@ -59,6 +59,8 @@ function buildNormalizedRecord(record: PipelineInputRecord, index: number, optio
     source: String(record.source ?? 'unknown').toLowerCase(),
     area: String(record.area ?? ''),
     category: String(record.category ?? ''),
+    businessHours: String(record.businessHours ?? ''),
+    regularHoliday: String(record.regularHoliday ?? ''),
     raw: { ...record },
     logs: [
       createLog('normalize', 'normalized_record', '正規化を実行', {

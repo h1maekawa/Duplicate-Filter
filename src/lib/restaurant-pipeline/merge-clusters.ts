@@ -73,6 +73,8 @@ export function mergeCluster(
     sources: uniqueSources(records),
     area: chooseBestString(records, (item) => item.area),
     category: chooseBestString(records, (item) => item.category),
+    businessHours: chooseBestString(records, (item) => item.businessHours),
+    regularHoliday: chooseBestString(records, (item) => item.regularHoliday),
     isChain: records.some((item) => item.chainDecision?.isChain),
     duplicateChecked: true,
     duplicateScore,
@@ -86,6 +88,8 @@ export function mergeCluster(
       url: record.url,
       area: record.area,
       category: record.category,
+      businessHours: record.businessHours,
+      regularHoliday: record.regularHoliday,
       logs: record.logs,
     })),
   };

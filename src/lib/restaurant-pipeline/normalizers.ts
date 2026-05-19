@@ -67,29 +67,27 @@ function stripBusinessWords(value: string): string {
 
 function stripBranchSuffix(value: string): string {
   let current = value;
-  const strictPatterns = [
-    /(本店|支店|総本店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u,
-  ];
+  current = current.replace(/(?:本店|支店|総本店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u, '');
 
-  for (const pattern of strictPatterns) {
-    const match = current.match(pattern);
-    if (!match) continue;
-    const candidate = current.slice(0, current.length - match[0].length);
-    if (candidate.length >= 2) {
-      current = candidate;
-      return current;
-    }
-  }
+  const branchPattern = /(?:駅前?|インター|通り?|[東西南北]口|モール)店$/u;
+  current = current.replace(branchPattern, '');
 
   if (current.endsWith('店')) {
     const chars = Array.from(current);
-    const locationHint = /(駅|口|丁目|通|町|市|区|郡|県|都|府|谷|坂|川|前|橋|丘|島|北|南|東|西)$/u;
-    for (let bodyLength = 2; bodyLength <= 6; bodyLength += 1) {
+    const locationHint = /(駅|口|丁目|通|町|市|区|郡|県|都|府|谷|坂|川|前|橋|丘|島|北|南|東|西|モール|プラザ|パーク)$/u;
+    for (let bodyLength = 2; bodyLength <= 8; bodyLength += 1) {
+      if (chars.length <= bodyLength + 1) break;
       const suffixBody = chars.slice(-(bodyLength + 1), -1).join('');
       const prefix = chars.slice(0, -(bodyLength + 1)).join('');
-      if (prefix.length >= 2 && suffixBody && locationHint.test(suffixBody)) {
+      if (prefix.length >= 2 && locationHint.test(suffixBody)) {
         return prefix;
       }
+    }
+
+    const simpleCityPattern = /([一-龠ァ-ヶー]{2,4})店$/u;
+    const match = current.match(simpleCityPattern);
+    if (match && current.length - match[0].length >= 2) {
+      current = current.slice(0, current.length - match[0].length);
     }
   }
 
@@ -120,9 +118,10 @@ export function normalizePhone(value: unknown): string {
 }
 
 function stripBuildingInfo(value: string): string {
-  return value
-    .replace(/(\s|　)+.*(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー).*$/i, '')
-    .replace(/(\s|　)+(?:[A-Za-z0-9一二三四五六七八九十]+F|[A-Za-z0-9一二三四五六七八九十]+階).*$/i, '');
+  let stripped = value.replace(/(?:\s|　)*(?:[Bb]?地下?[0-9一二三四五六七八九十]+[Ff階]|[Bb][0-9一二三四五六七八九十]+|[0-9一二三四五六七八九十]+[Ff階]).*$/i, '');
+  stripped = stripped.replace(/(?:\s|　)+.*(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー).*$/i, '');
+  stripped = stripped.replace(/(?<=[0-9\-]+)(?:[A-Za-zぁ-んァ-ヶ亜-熙]+(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー)).*$/i, '');
+  return stripped;
 }
 
 export function normalizeAddress(value: unknown): string {

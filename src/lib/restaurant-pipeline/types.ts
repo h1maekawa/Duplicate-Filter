@@ -4,6 +4,8 @@ export interface PipelineInputRecord {
   name?: string;
   address?: string;
   phone?: string;
+  businessHours?: string;
+  regularHoliday?: string;
   lat?: number | string | null;
   lng?: number | string | null;
   url?: string;
@@ -48,6 +50,8 @@ export interface NormalizedStoreRecord {
   source: SourceName;
   area: string;
   category: string;
+  businessHours: string;
+  regularHoliday: string;
   raw: Record<string, unknown>;
   logs: DecisionLog[];
   chainDecision?: ChainDecision;
@@ -93,6 +97,8 @@ export interface StoreOutputRecord {
   sources: SourceName[];
   area?: string;
   category?: string;
+  businessHours?: string;
+  regularHoliday?: string;
   isChain: boolean;
   duplicateChecked: boolean;
   duplicateScore: number;

@@ -67,6 +67,8 @@ export const COLUMN_ALIASES: Record<string, string[]> = {
   source: ['source', '媒体', '媒体名', 'site', 'platform'],
   area: ['area', 'region', 'prefecture', 'city', 'エリア', '地域', '市区町村', '都道府県'],
   category: ['category', 'genre', 'type', 'カテゴリ', 'ジャンル', '業種'],
+  businessHours: ['businessHours', '営業時間', '営業日', 'opening_hours', 'open_hours', 'hours'],
+  regularHoliday: ['regularHoliday', '定休日', '定期休日', 'regular_holiday', 'holiday', 'closed_days'],
 };
 
 export function normalizeSourceName(value: string): SourceName {
