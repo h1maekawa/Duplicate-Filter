@@ -149,4 +149,5 @@ export interface PipelineOptions {
   chainNames?: string[];
   outputPath?: string;
   inputPaths?: string[];
+  excludeCommercialFacilities?: boolean;
 }

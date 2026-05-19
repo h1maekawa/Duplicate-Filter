@@ -42,9 +42,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const excludeCommercialFacilities = formData.get('excludeCommercialFacilities') === 'true';
+
     const result = await runRestaurantPipeline(records, {
       normalize: { removeBusinessWords: true },
       chainNames: chainNames as string[],
+      excludeCommercialFacilities,
     });
 
     return NextResponse.json(result);

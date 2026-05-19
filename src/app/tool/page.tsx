@@ -7,6 +7,7 @@ import { generateCsvContent } from '../../lib/restaurant-pipeline/csv-exporter';
 export default function PipelinePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [removeBusinessWords, setRemoveBusinessWords] = useState(false);
+  const [excludeCommercialFacilities, setExcludeCommercialFacilities] = useState(true);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +25,7 @@ export default function PipelinePage() {
     const formData = new FormData();
     files.forEach((f) => formData.append('files', f));
     formData.append('removeBusinessWords', String(removeBusinessWords));
+    formData.append('excludeCommercialFacilities', String(excludeCommercialFacilities));
 
     try {
       const res = await fetch('/api/pipeline/process', {
@@ -129,6 +131,18 @@ export default function PipelinePage() {
           </div>
         </div>
 
+
+        <div style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <input
+            type="checkbox"
+            id="excludeCommercialFacilities"
+            checked={excludeCommercialFacilities}
+            onChange={(e) => setExcludeCommercialFacilities(e.target.checked)}
+          />
+          <label htmlFor="excludeCommercialFacilities" style={{ fontWeight: 600, color: '#fca5a5' }}>
+            商業施設内の店舗を完全に除外する（ららぽーと、イオンモール、アリオなど）
+          </label>
+        </div>
 
         <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <input

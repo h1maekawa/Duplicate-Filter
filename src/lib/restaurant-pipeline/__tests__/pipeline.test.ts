@@ -161,7 +161,7 @@ test('pipeline should exclude Aeon Mall restaurants ONLY for rocketnow and menu 
       source: 'menu',
     }
   ], {
-    chainDbPath: new URL('../../../../data/chains.json', import.meta.url).pathname,
+    chainNames: [],
   });
 
   // Out of 4 items:
@@ -189,5 +189,40 @@ test('pipeline should exclude Aeon Mall restaurants ONLY for rocketnow and menu 
   const aeonLog = result.chainExcluded[0].logs.find(l => l.code === 'excluded_aeon_mall');
   assert.ok(aeonLog);
   assert.equal(aeonLog.message, 'イオンモール除外（ロケットナウ・メニュー案件）');
+});
+
+test('pipeline should completely exclude commercial facilities when option is enabled', async () => {
+  const result = await runRestaurantPipeline([
+    {
+      name: 'スターバックスコーヒー イオンモールつくば店',
+      address: '茨城県つくば市稲岡66-1',
+      phone: '029-836-8101',
+      source: 'google',
+    },
+    {
+      name: 'タリーズコーヒー ららぽーと和泉店',
+      address: '大阪府和泉市あゆみ野4-4-7',
+      phone: '0725-51-3101',
+      source: 'tabelog',
+    },
+    {
+      name: '一般店舗',
+      address: '東京都渋谷区神南1-1-1',
+      phone: '03-1111-2222',
+      source: 'google',
+    }
+  ], {
+    excludeCommercialFacilities: true,
+    chainDbPath: new URL('../../../../data/chains.json', import.meta.url).pathname,
+  });
+
+  assert.equal(result.summary.inputCount, 3);
+  assert.equal(result.chainExcluded.length, 2);
+  assert.equal(result.stores.length, 1);
+  assert.equal(result.stores[0].name, '一般店舗');
+
+  const commLog = result.chainExcluded[0].logs.find(l => l.code === 'excluded_commercial_facility');
+  assert.ok(commLog);
+  assert.equal(commLog.message, '商業施設内店舗除外');
 });
 

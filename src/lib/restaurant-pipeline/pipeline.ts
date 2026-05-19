@@ -1,5 +1,6 @@
 import { DEFAULT_SCORING_CONFIG } from './constants';
 import { createChainMatcher } from './chain-detection';
+import { isCommercialFacility } from './commercial-facilities';
 import { buildGeoCellKey } from './geo';
 import { loadChainDatabase, writePipelineResult } from './io';
 import { createLog } from './log';
@@ -187,8 +188,21 @@ export async function runRestaurantPipeline(
   const candidates: NormalizedStoreRecord[] = [];
 
   for (const record of normalizedRecords) {
-    // ロケットナウとメニューの案件に関してはイオンモールを省く
-    if (isRocketNowOrMenu(record.source) && isAeonMall(record.rawName, record.rawAddress)) {
+    // 商業施設除外オプションが有効な場合、またはロケットナウ・メニュー案件でイオンモールの場合
+    if (options.excludeCommercialFacilities) {
+      const commCheck = isCommercialFacility(record.rawName, record.rawAddress);
+      if (commCheck.isMatch) {
+        record.logs.push(
+          createLog('exclude', 'excluded_commercial_facility', '商業施設内店舗除外', {
+            matchedFacility: commCheck.matchedPattern,
+            rawName: record.rawName,
+            rawAddress: record.rawAddress,
+          }),
+        );
+        chainExcluded.push(record);
+        continue;
+      }
+    } else if (isRocketNowOrMenu(record.source) && isAeonMall(record.rawName, record.rawAddress)) {
       record.logs.push(
         createLog('exclude', 'excluded_aeon_mall', 'イオンモール除外（ロケットナウ・メニュー案件）', {
           source: record.source,
