@@ -57,18 +57,34 @@ export const BUSINESS_WORDS = [
   'ビストロ',
 ];
 
-export const COLUMN_ALIASES: Record<string, string[]> = {
-  name: ['name', '店舗名', '店名', 'restaurant_name'],
-  address: ['address', '住所', '所在地'],
-  phone: ['phone', '電話番号', '電話', 'tel'],
-  lat: ['lat', 'latitude', '緯度'],
-  lng: ['lng', 'lon', 'longitude', '経度'],
-  url: ['url', 'URL', '店舗URL', 'store_url'],
-  source: ['source', '媒体', '媒体名', 'site', 'platform'],
-  area: ['area', 'region', 'prefecture', 'city', 'エリア', '地域', '市区町村', '都道府県'],
-  category: ['category', 'genre', 'type', 'カテゴリ', 'ジャンル', '業種'],
-  businessHours: ['businessHours', '営業時間', '営業日', 'opening_hours', 'open_hours', 'hours'],
-  regularHoliday: ['regularHoliday', '定休日', '定期休日', 'regular_holiday', 'holiday', 'closed_days'],
+export const SOURCE_COLUMN_MAPPINGS: Record<string, Record<string, string[]>> = {
+  tabelog: {
+    name: ['name'],
+    phone: ['phone'],
+    category: ['genre'],
+    address: ['address'],
+    businessHours: ['raw_business_hours'],
+    regularHoliday: ['raw_business_hours'], // 食べログは同一列から抽出するため
+    url: ['url']
+  },
+  hotpepper: {
+    name: ['name'],
+    phone: ['phone'],
+    category: ['genre'],
+    address: ['address'],
+    businessHours: ['raw_business_hours'],
+    regularHoliday: ['raw_business_hours'], // ホットペッパーも同一列から抽出するため
+    url: ['url']
+  },
+  google: {
+    name: ['name'],
+    phone: ['phone'],
+    category: ['genre'],
+    address: ['address'],
+    businessHours: ['opening_hours_details'],
+    regularHoliday: ['regular_holiday'],
+    url: ['url']
+  }
 };
 
 export function normalizeSourceName(value: string): SourceName {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { runRestaurantPipeline } from '../../../../lib/restaurant-pipeline/pipeline';
 import { parse } from 'csv-parse/sync';
+import { normalizeRow } from '../../../../lib/restaurant-pipeline/io';
 import chainData from '../../../../../data/chains.json';
 
 // export const runtime = 'edge'; // Cloudflare用。ローカル動作優先のため一旦コメントアウト
@@ -29,16 +30,8 @@ export async function POST(request: NextRequest) {
       });
 
       for (const record of parsedRecords) {
-        const sourceKey = Object.keys(record).find(k => 
-          ['source', '媒体', '媒体名', 'site', 'platform'].includes(k.trim().toLowerCase())
-        );
-        if (sourceKey && record[sourceKey]) {
-          record.source = record[sourceKey];
-        } else {
-          record.source = file.name;
-        }
-        
-        records.push(record);
+        const normalized = normalizeRow(record as Record<string, unknown>, file.name);
+        records.push(normalized);
       }
     }
 

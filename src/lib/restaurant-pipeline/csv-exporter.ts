@@ -9,11 +9,11 @@ export function generateCsvContent(result: PipelineResult): string {
 
   const headers = [
     'name',
-    'phone',
     'category',
+    'phone',
     'address',
-    'businessHours',
     'regularHoliday',
+    'businessHours',
     'url',
     'source',
     'storeId',
@@ -27,11 +27,11 @@ export function generateCsvContent(result: PipelineResult): string {
   const rows = stores.map((store) => {
     return [
       store.name,
-      store.phone,
       store.category ?? '',
+      store.phone,
       store.address,
-      store.businessHours ?? '',
       store.regularHoliday ?? '',
+      store.businessHours ?? '',
       store.url,
       store.sources.join('|'),
       store.storeId,

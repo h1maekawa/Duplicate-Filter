@@ -214,40 +214,49 @@ export function isCommercialFacility(
   address: string
 ): { isMatch: boolean; matchedPattern: string | null } {
   const rawText = `${name} ${address}`.toLowerCase();
+  const normalizedText = rawText.normalize('NFKC');
   
-  // 表記揺れやスペース、記号の差異を吸収するためにNFKC正規化を行い、不要な文字を除去
-  const normalizedText = rawText
-    .normalize('NFKC')
-    .replace(/[\s　\-_/\\|:：;；.．,，、。!！?？(（)）'"“”]+/g, '');
+  // 1. ユーザー指定の最優先除外ワード
+  const strictWords = [
+    'parco', 'マルイ', 'ルミネ', 'アトレ', 'イオン', 
+    '高島屋', '東急', '西武', 'opa', 'ミロード', 
+    '駅ビル', '地下街', 'ららぽーと', 'ミッドタウン', 
+    'ヒカリエ', 'スクランブルスクエア'
+  ];
 
-  // 1. 主要キーワードによる判定
+  for (const word of strictWords) {
+    if (normalizedText.includes(word)) {
+      return { isMatch: true, matchedPattern: word };
+    }
+  }
+
+  // 2. ○F, B1, B2, 地下○階 などの階数情報があり、かつ何らかの商業施設名が含まれる場合
+  const hasFloor = /(?:[0-9一二三四五六七八九十]+F|[0-9一二三四五六七八九十]+階|B[0-9一二三四五六七八九十]+|地下[0-9一二三四五六七八九十]+階|地下[0-9一二三四五六七八九十]+F?)/i.test(normalizedText);
+
+  if (hasFloor) {
+    const facilityWords = [
+      'ビル', 'モール', 'プラザ', 'センター', 'タウン', 'アリオ', 'アトレ', 'ルミネ', 'パルコ', 
+      'イオン', '東急', '西武', 'マルイ', '百貨店', 'デパート', 'スクエア', 'ヒルズ', 'ガーデン', 
+      'ウォーク', 'ポート', 'テラス', 'ゲート', 'シティ', 'プレイス', 'コレド', 'キャナル'
+    ];
+    for (const fac of facilityWords) {
+      if (normalizedText.includes(fac)) {
+        return { isMatch: true, matchedPattern: `floor_with_${fac}` };
+      }
+    }
+  }
+
+  // 3. 基本的な他の商業施設キーワード
   for (const keyword of COMMERCIAL_KEYWORDS) {
-    const normalizedKeyword = keyword
-      .normalize('NFKC')
-      .toLowerCase()
-      .replace(/[\s　\-_/\\|:：;；.．,，、。!！?？(（)）'"“”]+/g, '');
+    const normalizedKeyword = keyword.normalize('NFKC').toLowerCase();
     if (normalizedText.includes(normalizedKeyword)) {
       return { isMatch: true, matchedPattern: keyword };
     }
   }
 
-  // 2. 特殊な複数語パターンの判定
-  if (normalizedText.includes('イオン') && normalizedText.includes('モール')) {
-    return { isMatch: true, matchedPattern: 'イオン & モール' };
-  }
-  if (normalizedText.includes('aeon') && normalizedText.includes('mall')) {
-    return { isMatch: true, matchedPattern: 'aeon & mall' };
-  }
-  if (normalizedText.includes('三井') && normalizedText.includes('ショッピング')) {
-    return { isMatch: true, matchedPattern: '三井 & ショッピングパーク' };
-  }
-
-  // 3. リスト全体の完全・部分一致による個別判定（念のため）
+  // 4. リスト全体の完全・部分一致による個別判定
   for (const facility of LISTED_COMMERCIAL_FACILITIES) {
-    const normalizedFacility = facility
-      .normalize('NFKC')
-      .toLowerCase()
-      .replace(/[\s　\-_/\\|:：;；.．,，、。!！?？(（)）'"“”]+/g, '');
+    const normalizedFacility = facility.normalize('NFKC').toLowerCase();
     if (normalizedText.includes(normalizedFacility)) {
       return { isMatch: true, matchedPattern: facility };
     }

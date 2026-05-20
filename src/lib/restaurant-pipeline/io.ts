@@ -1,30 +1,64 @@
 import { parse } from 'csv-parse/sync';
-import { COLUMN_ALIASES, normalizeSourceName } from './constants';
+import { SOURCE_COLUMN_MAPPINGS, normalizeSourceName } from './constants';
 import { safeNumber } from './normalizers';
 import type { PipelineInputRecord, PipelineOptions, PipelineResult, SourceName } from './types';
 
 // Edge Runtime かどうかを判定
 const isEdge = process.env.NEXT_RUNTIME === 'edge';
 
-function findValue(row: Record<string, unknown>, field: keyof typeof COLUMN_ALIASES): unknown {
-  const aliases = COLUMN_ALIASES[field];
-  for (const alias of aliases) {
-    const foundKey = Object.keys(row).find((key) => key.trim().toLowerCase() === alias.trim().toLowerCase());
+const DEFAULT_MAPPING: Record<string, string[]> = {
+  name: ['name', '店舗名', '店名', 'restaurant_name'],
+  address: ['address', '住所', '所在地'],
+  phone: ['phone', '電話番号', '電話', 'tel'],
+  lat: ['lat', 'latitude', '緯度'],
+  lng: ['lng', 'lon', 'longitude', '経度'],
+  url: ['url', 'URL', '店舗URL', 'store_url'],
+  area: ['area', 'region', 'prefecture', 'city', 'エリア', '地域', '市区町村', '都道府県'],
+  category: ['category', 'genre', 'type', 'カテゴリ', 'ジャンル', '業種'],
+  businessHours: ['businessHours', '営業時間', '営業日', 'opening_hours', 'open_hours', 'hours'],
+  regularHoliday: ['regularHoliday', '定休日', '定期休日', 'regular_holiday', 'holiday', 'closed_days'],
+};
+
+function findValueByMapping(row: Record<string, unknown>, keys: string[]): unknown {
+  for (const key of keys) {
+    const foundKey = Object.keys(row).find((k) => k.trim().toLowerCase() === key.trim().toLowerCase());
     if (foundKey) return row[foundKey];
   }
   return undefined;
 }
 
-function normalizeRow(row: Record<string, unknown>, sourceName: string): PipelineInputRecord {
+export function normalizeRow(row: Record<string, unknown>, sourceName: string): PipelineInputRecord {
+  const rawSource = row.source || row['媒体'] || row['媒体名'] || row['site'] || row['platform'];
+  const finalSource = String(rawSource ?? sourceName);
+  const normalizedSource = normalizeSourceName(finalSource);
+
+  const mapping = SOURCE_COLUMN_MAPPINGS[normalizedSource] ?? {};
+
+  const nameKeys = mapping.name ?? DEFAULT_MAPPING.name;
+  const addressKeys = mapping.address ?? DEFAULT_MAPPING.address;
+  const phoneKeys = mapping.phone ?? DEFAULT_MAPPING.phone;
+  const urlKeys = mapping.url ?? DEFAULT_MAPPING.url;
+  const categoryKeys = mapping.category ?? DEFAULT_MAPPING.category;
+  const businessHoursKeys = mapping.businessHours ?? DEFAULT_MAPPING.businessHours;
+  const regularHolidayKeys = mapping.regularHoliday ?? DEFAULT_MAPPING.regularHoliday;
+
+  const latKeys = DEFAULT_MAPPING.lat;
+  const lngKeys = DEFAULT_MAPPING.lng;
+  const areaKeys = DEFAULT_MAPPING.area;
+
   return {
     ...row,
-    name: String(findValue(row, 'name') ?? '').trim(),
-    address: String(findValue(row, 'address') ?? '').trim(),
-    phone: String(findValue(row, 'phone') ?? '').trim(),
-    lat: safeNumber(findValue(row, 'lat')),
-    lng: safeNumber(findValue(row, 'lng')),
-    url: String(findValue(row, 'url') ?? '').trim(),
-    source: normalizeSourceName(String(findValue(row, 'source') ?? sourceName)),
+    name: String(findValueByMapping(row, nameKeys) ?? '').trim(),
+    address: String(findValueByMapping(row, addressKeys) ?? '').trim(),
+    phone: String(findValueByMapping(row, phoneKeys) ?? '').trim(),
+    lat: safeNumber(findValueByMapping(row, latKeys)),
+    lng: safeNumber(findValueByMapping(row, lngKeys)),
+    url: String(findValueByMapping(row, urlKeys) ?? '').trim(),
+    source: normalizedSource,
+    area: String(findValueByMapping(row, areaKeys) ?? '').trim(),
+    category: String(findValueByMapping(row, categoryKeys) ?? '').trim(),
+    businessHours: String(findValueByMapping(row, businessHoursKeys) ?? '').trim(),
+    regularHoliday: String(findValueByMapping(row, regularHolidayKeys) ?? '').trim(),
   };
 }
 

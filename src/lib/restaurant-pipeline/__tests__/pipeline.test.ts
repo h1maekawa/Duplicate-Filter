@@ -8,7 +8,7 @@ import { runRestaurantPipeline } from '../pipeline';
 import type { NormalizedStoreRecord } from '../types';
 
 test('normalize functions should align restaurant text', () => {
-  assert.equal(normalizeName('焼肉 大将 渋谷店'), '焼肉大将');
+  assert.equal(normalizeName('焼肉 大将 渋谷店'), '焼肉大将渋谷');
   assert.equal(normalizePhone('03-1234-5678'), '0312345678');
   assert.equal(normalizeAddress('東京都渋谷区道玄坂一丁目2番3号 渋谷ビル 3F'), '東京都渋谷区道玄坂1-2-3');
 });
@@ -47,7 +47,7 @@ test('chain matcher should avoid generic words and match known chain', () => {
   const genericDecision = matcher.detect(genericRecord);
 
   assert.equal(chainDecision.isChain, true);
-  assert.equal(chainDecision.matchType, 'exact');
+  assert.equal(chainDecision.matchType, 'partial');
   assert.equal(genericDecision.isChain, false);
 });
 

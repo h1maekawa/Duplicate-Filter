@@ -99,10 +99,13 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
 
   let normalized = nfkc(value).toLowerCase();
   normalized = stripCorporateWords(normalized);
-  normalized = collapseSpaces(normalized);
+  
+  // スペース、全角スペース、・、-、ー を完全に除去
+  normalized = normalized.replace(/[\s　・\-ー]+/g, '');
   normalized = removeSymbols(normalized);
-  normalized = normalized.replace(/[\s　]+/g, '');
-  normalized = stripBranchSuffix(normalized);
+  
+  // 本店, 支店, 号店, 店, 階, F を完全に除去
+  normalized = normalized.replace(/(本店|支店|号店|店|階|[Ff])/g, '');
 
   if (options.removeBusinessWords) {
     normalized = stripBusinessWords(normalized).replace(/[\s　]+/g, '');
@@ -113,7 +116,8 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
 
 export function normalizePhone(value: unknown): string {
   if (value == null) return '';
-  const normalized = nfkc(String(value)).replace(/^\+81/, '0').replace(/\D/g, '').trim();
+  // 記号やハイフンを完全に除去し、純粋な数字のみにする
+  const normalized = nfkc(String(value)).replace(/\D/g, '');
   if (normalized.length !== 10 && normalized.length !== 11) {
     return '';
   }
@@ -121,9 +125,13 @@ export function normalizePhone(value: unknown): string {
 }
 
 function stripBuildingInfo(value: string): string {
-  let stripped = value.replace(/(?:\s|　)*(?:[Bb]?地下?[0-9一二三四五六七八九十]+[Ff階]|[Bb][0-9一二三四五六七八九十]+|[0-9一二三四五六七八九十]+[Ff階]).*$/i, '');
-  stripped = stripped.replace(/(?:\s|　)+.*(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー).*$/i, '');
-  stripped = stripped.replace(/(?<=[0-9\-]+)(?:[A-Za-zぁ-んァ-ヶ亜-熙]+(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー)).*$/i, '');
+  let stripped = value;
+  // 1. 末尾の階数（〇階、〇F、地下〇階など）を除去
+  stripped = stripped.replace(/(?:\s|　)*(?:[0-9一二三四五六七八九十]+F|[0-9一二三四五六七八九十]+階|B[0-9一二三四五六七八九十]+|B[0-9一二三四五六七八九十]+F|地下[0-9一二三四五六七八九十]+階|地下[0-9一二三四五六七八九十]+F?)(?:\s|　)*$/gi, '');
+  // 2. 末尾のビル名・建物名（スペースあり）を除去
+  stripped = stripped.replace(/(?:\s|　)+.*(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー|アパート|コート|レジデンス|メゾン|プラザ).*$/gi, '');
+  // 3. 番地の直後に続くビル名（スペースなし）を除去
+  stripped = stripped.replace(/(?<=[0-9])(?:\s|　)*[^\d\s\-\u30FC\uFF0D\u2212\u2010\u2015]+(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー|アパート|コート|レジデンス|メゾン|プラザ).*$/gi, '');
   return stripped;
 }
 
