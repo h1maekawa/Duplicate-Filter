@@ -24,7 +24,16 @@ export function generateCsvContent(result: PipelineResult): string {
     'createdAt'
   ];
 
-  const rows = stores.map((store) => {
+  // 電話番号がある店舗を上に、空白の店舗を下にソート
+  const sortedStores = [...stores].sort((a, b) => {
+    const hasPhoneA = Boolean(a.phone && a.phone.trim() !== '');
+    const hasPhoneB = Boolean(b.phone && b.phone.trim() !== '');
+    if (hasPhoneA && !hasPhoneB) return -1;
+    if (!hasPhoneA && hasPhoneB) return 1;
+    return 0;
+  });
+
+  const rows = sortedStores.map((store) => {
     return [
       store.name,
       store.category ?? '',
