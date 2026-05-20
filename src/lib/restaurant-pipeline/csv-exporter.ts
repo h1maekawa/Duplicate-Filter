@@ -50,5 +50,5 @@ export function generateCsvContent(result: PipelineResult): string {
     });
   });
 
-  return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  return '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 }
