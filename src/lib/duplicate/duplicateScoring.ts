@@ -10,6 +10,26 @@ function getDistance(a: NormalizedStoreRecord, b: NormalizedStoreRecord): number
   return haversineDistanceMeters(a.lat, a.lng, b.lat, b.lng);
 }
 
+/**
+ * 住所の番地部分（数字列）を抽出して比較する
+ * 同じチェーン名でも番地が異なれば別店舗と判断する
+ */
+function extractAddressNumbers(address: string): string[] {
+  const matches = address.match(/\d+/g);
+  return matches ?? [];
+}
+
+function addressNumbersSimilar(addrA: string, addrB: string): boolean {
+  if (!addrA || !addrB) return false;
+  const numsA = extractAddressNumbers(addrA);
+  const numsB = extractAddressNumbers(addrB);
+  if (numsA.length === 0 || numsB.length === 0) return false;
+  // 先頭2つの数字群（丁目・番地）が同じかどうか
+  const keyA = numsA.slice(0, 2).join('-');
+  const keyB = numsB.slice(0, 2).join('-');
+  return keyA === keyB;
+}
+
 export function evaluateDuplicate(
   left: NormalizedStoreRecord,
   right: NormalizedStoreRecord,
@@ -45,10 +65,17 @@ export function evaluateDuplicate(
   const addressSimilarity = jaroWinkler(left.normalizedAddress, right.normalizedAddress);
 
   // Level 1: Phone match
+  // ただし名前の類似度が低い場合（0.5未満）は同じビルの別テナント等の誤マッチを防ぐ
   if (phoneMatched) {
-    duplicate = true;
-    score = config.phoneMatchScore;
-    reasons.push('phone_match');
+    if (nameSimilarity >= 0.5) {
+      duplicate = true;
+      score = config.phoneMatchScore;
+      reasons.push('phone_match');
+    } else {
+      // 電話番号は一致するが名前が全く違う → 共有電話番号（ビル・施設の代表番号等）の可能性
+      // 重複とは判断しない
+      reasons.push('phone_match_rejected_name_mismatch');
+    }
   }
 
   // Level 2: URL match
@@ -69,15 +96,38 @@ export function evaluateDuplicate(
   }
 
   // Level 4: Name similarity and address similarity match
+  // 同じチェーン名の別支店を誤統合しないよう、住所の番地レベルでも一致を確認
   if (!duplicate) {
     if (nameSimilarity >= config.nameSimilarityThreshold && addressSimilarity >= config.addressSimilarityThreshold) {
-      duplicate = true;
-      score = defaultScoring.similarityMatchScore || 80;
-      reasons.push('similarity_match');
+      // 住所の番地部分が異なる場合、同じチェーンの別支店の可能性が高い
+      // その場合は重複と判定しない
+      const numbersMatch = addressNumbersSimilar(left.normalizedAddress, right.normalizedAddress);
+      const hasAddressNumbers = extractAddressNumbers(left.normalizedAddress).length > 0
+        && extractAddressNumbers(right.normalizedAddress).length > 0;
+
+      if (!hasAddressNumbers || numbersMatch) {
+        // 番地情報がない、または番地が一致する場合のみ重複とする
+        duplicate = true;
+        score = defaultScoring.similarityMatchScore || 80;
+        reasons.push('similarity_match');
+      } else {
+        // 名前は似ているが住所の番地が違う → 同チェーン別支店と判断
+        reasons.push('similarity_match_rejected_different_address_numbers');
+      }
     }
   }
 
   const distanceMeters = getDistance(left, right);
+
+  // Level 5: 距離ベース重複判定
+  // 非常に近距離（閾値以内）かつ名前の類似度が中程度以上の場合は重複とみなす
+  if (!duplicate && distanceMeters != null && distanceMeters <= config.distanceThresholdMeters) {
+    if (nameSimilarity >= 0.75) {
+      duplicate = true;
+      score = config.distanceMatchScore;
+      reasons.push('distance_and_name_match');
+    }
+  }
 
   return {
     pairKey: `${Math.min(left.recordIndex, right.recordIndex)}:${Math.max(left.recordIndex, right.recordIndex)}`,

@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
 
     const records: any[] = [];
     const chainNames = Array.isArray(chainData) ? chainData : [];
+    console.log(`[API] Loaded chainNames count: ${chainNames.length}`);
 
     for (const file of files) {
       const text = await file.text();
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
         trim: true,
         relax_column_count: true,
       });
+      console.log(`[API] Parsed ${parsedRecords.length} records from ${file.name}`);
 
       for (const record of parsedRecords) {
         const normalized = normalizeRow(record as Record<string, unknown>, file.name);
@@ -35,15 +37,33 @@ export async function POST(request: NextRequest) {
     }
 
     const excludeCommercialFacilities = formData.get('excludeCommercialFacilities') === 'true';
+    const removeBusinessWords = formData.get('removeBusinessWords') === 'true';
+    console.log(`[API] excludeCommercialFacilities option: ${excludeCommercialFacilities}`);
+    console.log(`[API] removeBusinessWords option: ${removeBusinessWords}`);
 
     const result = await runRestaurantPipeline(records, {
-      normalize: { removeBusinessWords: true },
+      normalize: { removeBusinessWords },
       chainNames: chainNames as string[],
       excludeCommercialFacilities,
     });
 
+    console.log('[API] Pipeline result summary:', JSON.stringify(result.summary, null, 2));
+
+    // Log sample excluded records or search for Aloha Table
+    const alohaInMall = result.mallExcluded.filter(r => r.rawName.includes('アロハテーブル'));
+    console.log(`[API] Aloha Table in mallExcluded: ${alohaInMall.length}`);
+    if (alohaInMall.length > 0) {
+      console.log('[API] Aloha Table flags in mallExcluded:', {
+        chain_flag: alohaInMall[0].chain_flag,
+        mall_flag: alohaInMall[0].mall_flag,
+        exclude_reason: alohaInMall[0].exclude_reason,
+      });
+    }
+
     return NextResponse.json(result);
   } catch (err: any) {
+    console.error('[API] Error in route:', err);
     return NextResponse.json({ error: err.message || 'Error' }, { status: 500 });
   }
 }
+

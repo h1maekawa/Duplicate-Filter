@@ -48,10 +48,10 @@ export function generateCsvContent(result: PipelineResult, options: { includeExc
       }
     }
   } else {
-    // Default: filter out records with active exclude reasons or flags
-    stores = stores.filter(
-      (s) => !s.chain_flag && !s.mall_flag && (!s.exclude_reason || s.exclude_reason.length === 0),
-    );
+    // Default: exclude only records explicitly flagged as chain/mall.
+    // NOTE: exclude_reason may contain 'duplicate' for merged sub-records,
+    // so we must NOT filter on exclude_reason here — only on chain/mall flags.
+    stores = stores.filter((s) => !s.chain_flag && !s.mall_flag);
   }
 
   if (stores.length === 0) return '';
@@ -123,5 +123,6 @@ export function generateCsvContent(result: PipelineResult, options: { includeExc
     });
   });
 
-  return '\uFEFF' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+  // NOTE: BOM is added by the caller (page.tsx Blob constructor) — do NOT add here.
+  return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
 }

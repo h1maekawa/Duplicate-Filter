@@ -31,17 +31,17 @@ export function normalizeRow(row: Record<string, unknown>, filenameFallback: str
   const normalizedSource = detectSource(row, filenameFallback);
   const mapping = SOURCE_COLUMN_MAPPINGS[normalizedSource] ?? {};
 
-  const nameKeys = mapping.name ?? DEFAULT_MAPPING.name;
-  const addressKeys = mapping.address ?? DEFAULT_MAPPING.address;
-  const phoneKeys = mapping.phone ?? DEFAULT_MAPPING.phone;
-  const urlKeys = mapping.url ?? DEFAULT_MAPPING.url;
-  const categoryKeys = mapping.category ?? DEFAULT_MAPPING.category;
-  const businessHoursKeys = mapping.businessHours ?? DEFAULT_MAPPING.businessHours;
-  const regularHolidayKeys = mapping.regularHoliday ?? DEFAULT_MAPPING.regularHoliday;
+  const nameKeys = [...(mapping.name ?? []), ...DEFAULT_MAPPING.name];
+  const addressKeys = [...(mapping.address ?? []), ...DEFAULT_MAPPING.address];
+  const phoneKeys = [...(mapping.phone ?? []), ...DEFAULT_MAPPING.phone];
+  const urlKeys = [...(mapping.url ?? []), ...DEFAULT_MAPPING.url];
+  const categoryKeys = [...(mapping.category ?? []), ...DEFAULT_MAPPING.category];
+  const businessHoursKeys = [...(mapping.businessHours ?? []), ...DEFAULT_MAPPING.businessHours];
+  const regularHolidayKeys = [...(mapping.regularHoliday ?? []), ...DEFAULT_MAPPING.regularHoliday];
 
-  const latKeys = DEFAULT_MAPPING.lat;
-  const lngKeys = DEFAULT_MAPPING.lng;
-  const areaKeys = DEFAULT_MAPPING.area;
+  const latKeys = [...(mapping.lat ?? []), ...DEFAULT_MAPPING.lat];
+  const lngKeys = [...(mapping.lng ?? []), ...DEFAULT_MAPPING.lng];
+  const areaKeys = [...(mapping.area ?? []), ...DEFAULT_MAPPING.area];
 
   const sourceColumns = Object.keys(row);
 
