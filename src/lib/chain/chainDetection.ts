@@ -126,7 +126,8 @@ export function createChainMatcher(
         }
 
         if (isPartial) {
-          chainScore += 50;
+          // 公式チェーンDBへの部分一致は確度が高い → しきい値(60)を単独で超えるスコアを付与
+          chainScore += 65;
           matchType = 'partial';
           reasons.push('partial_brand_match');
         } else {
