@@ -1,47 +1,30 @@
 import { DEFAULT_SCORING_CONFIG } from './constants';
-import { createChainMatcher } from './chain-detection';
-import { isCommercialFacility } from './commercial-facilities';
-import { buildGeoCellKey } from './geo';
-import { loadChainDatabase, writePipelineResult } from './io';
-import { createLog } from './log';
+import { createLog } from './utils/log';
+import { normalizeName, normalizePhone, normalizeAddress, normalizeUrl, safeNumber } from './normalize/normalizers';
+import { isCommercialFacility } from './mall/mallDetection';
+import { createChainMatcher, countBrandOccurrences } from './chain/chainDetection';
+import { evaluateDuplicate } from './duplicate/duplicateScoring';
+import { UnionFind } from './duplicate/unionFind';
 import { mergeCluster } from './merge-clusters';
-import { evaluateDuplicate } from './duplicate-scoring';
-import { normalizeAddress, normalizeName, normalizePhone, normalizeUrl, safeNumber } from './normalizers';
+import { loadChainDatabase, writePipelineResult } from './parser/parseInputFiles';
+import { buildGeoCellKey } from './utils/geo';
+import scoringConfig from './config/scoring_config.json';
 import type {
-  DuplicateEvaluation,
-  NormalizedStoreRecord,
   PipelineInputRecord,
   PipelineOptions,
+  NormalizedStoreRecord,
+  DuplicateEvaluation,
   PipelineResult,
 } from './types';
 
-class UnionFind {
-  private parent: number[];
-
-  constructor(size: number) {
-    this.parent = Array.from({ length: size }, (_, index) => index);
-  }
-
-  find(index: number): number {
-    if (this.parent[index] !== index) {
-      this.parent[index] = this.find(this.parent[index]);
-    }
-    return this.parent[index];
-  }
-
-  union(left: number, right: number): void {
-    const rootLeft = this.find(left);
-    const rootRight = this.find(right);
-    if (rootLeft !== rootRight) {
-      this.parent[rootRight] = rootLeft;
-    }
-  }
-}
-
-function buildNormalizedRecord(record: PipelineInputRecord, index: number, options: PipelineOptions): NormalizedStoreRecord {
+function buildNormalizedRecord(
+  record: PipelineInputRecord,
+  index: number,
+  options: PipelineOptions,
+): NormalizedStoreRecord {
   const normalizedName = normalizeName(record.name ?? '', options.normalize);
   const normalizedPhone = normalizePhone(record.phone ?? '');
-  const normalizedAddress = normalizeAddress(record.address ?? '');
+  const normalizedAddress = normalizeAddress(record.address ?? '', options.normalize);
   const normalizedUrl = normalizeUrl(record.url ?? '');
 
   return {
@@ -61,7 +44,8 @@ function buildNormalizedRecord(record: PipelineInputRecord, index: number, optio
     category: String(record.category ?? ''),
     businessHours: String(record.businessHours ?? ''),
     regularHoliday: String(record.regularHoliday ?? ''),
-    raw: { ...record },
+    sourceColumns: (record.sourceColumns as string[]) || Object.keys(record),
+    raw: (record.raw as Record<string, unknown>) || { ...record },
     logs: [
       createLog('normalize', 'normalized_record', '正規化を実行', {
         rawName: String(record.name ?? ''),
@@ -72,6 +56,10 @@ function buildNormalizedRecord(record: PipelineInputRecord, index: number, optio
         normalizedAddress,
       }),
     ],
+    chainScore: 0,
+    chain_flag: false,
+    mall_flag: false,
+    exclude_reason: [],
   };
 }
 
@@ -148,7 +136,10 @@ function buildCandidatePairKeys(records: NormalizedStoreRecord[]): string[] {
   return [...candidatePairs];
 }
 
-function toPairRecords(pairKey: string, indexMap: Map<number, NormalizedStoreRecord>): [NormalizedStoreRecord, NormalizedStoreRecord] {
+function toPairRecords(
+  pairKey: string,
+  indexMap: Map<number, NormalizedStoreRecord>,
+): [NormalizedStoreRecord, NormalizedStoreRecord] {
   const [leftIndex, rightIndex] = pairKey.split(':').map(Number);
   const left = indexMap.get(leftIndex);
   const right = indexMap.get(rightIndex);
@@ -186,62 +177,99 @@ export async function runRestaurantPipeline(
   const chainNames = options.chainNames ?? (options.chainDbPath ? await loadChainDatabase(options.chainDbPath) : []);
   const chainMatcher = createChainMatcher(chainNames, options.normalize);
 
+  // Compute brand occurrence counts on the whole dataset
+  const heavyBrands = countBrandOccurrences(normalizedRecords, scoringConfig.chain?.occurrenceThreshold || 5);
+
   const chainExcluded: NormalizedStoreRecord[] = [];
+  const mallExcluded: NormalizedStoreRecord[] = [];
   const candidates: NormalizedStoreRecord[] = [];
 
   for (const record of normalizedRecords) {
-    // 商業施設除外オプションが有効な場合、またはロケットナウ・メニュー案件でイオンモールの場合
+    let excluded = false;
+
+    // 1. Mall/Commercial facility check
+    let isMall = false;
     if (options.excludeCommercialFacilities) {
       const commCheck = isCommercialFacility(record.rawName, record.rawAddress);
       if (commCheck.isMatch) {
+        isMall = true;
+        record.mall_flag = true;
+        record.exclude_reason.push('mall_tenant');
         record.logs.push(
-          createLog('exclude', 'excluded_commercial_facility', '商業施設内店舗除外', {
+          createLog('mall', 'excluded_commercial_facility', '商業施設内店舗除外', {
             matchedFacility: commCheck.matchedPattern,
             rawName: record.rawName,
             rawAddress: record.rawAddress,
           }),
         );
-        chainExcluded.push(record);
-        continue;
       }
     } else if (isRocketNowOrMenu(record.source) && isAeonMall(record.rawName, record.rawAddress)) {
+      isMall = true;
+      record.mall_flag = true;
+      record.exclude_reason.push('mall_tenant');
       record.logs.push(
-        createLog('exclude', 'excluded_aeon_mall', 'イオンモール除外（ロケットナウ・メニュー案件）', {
+        createLog('mall', 'excluded_aeon_mall', 'イオンモール除外（ロケットナウ・メニュー案件）', {
           source: record.source,
           rawName: record.rawName,
           rawAddress: record.rawAddress,
         }),
       );
-      chainExcluded.push(record);
-      continue;
     }
 
-    const chainDecision = chainMatcher.detect(record);
+    // 2. Chain detection check
+    const chainDecision = chainMatcher.detect(record, heavyBrands);
     record.chainDecision = chainDecision;
 
     if (chainDecision.isChain) {
+      record.chain_flag = true;
+      record.exclude_reason.push('chain_store');
       record.logs.push(
         createLog('exclude', 'excluded_chain', 'チェーン店として除外', {
           matchedChainName: chainDecision.matchedChainName,
           matchType: chainDecision.matchType,
+          chainScore: record.chainScore,
         }),
       );
-      chainExcluded.push(record);
-      continue;
     }
 
-    candidates.push(record);
+    if (isMall) {
+      mallExcluded.push(record);
+      excluded = true;
+    }
+    if (record.chain_flag) {
+      chainExcluded.push(record);
+      excluded = true;
+    }
+
+    if (!excluded) {
+      candidates.push(record);
+    }
   }
 
   const indexMap = new Map(candidates.map((record) => [record.recordIndex, record]));
   const pairKeys = buildCandidatePairKeys(candidates);
-  const scoringConfig = { ...DEFAULT_SCORING_CONFIG, ...options.scoring };
+  
+  // Merge default config with config JSON and options
+  const defaultScoring = scoringConfig.duplicate;
+  const scoringParams = {
+    phoneMatchScore: defaultScoring.phoneMatchScore || 100,
+    distanceMatchScore: 50,
+    nameSimilarityScore: 40,
+    urlMatchScore: defaultScoring.urlMatchScore || 70,
+    addressSimilarityScore: 20,
+    duplicateThreshold: defaultScoring.duplicateThreshold || 70,
+    distanceThresholdMeters: defaultScoring.distanceThresholdMeters || 30,
+    nameSimilarityThreshold: defaultScoring.nameSimilarityThreshold || 0.85,
+    addressSimilarityThreshold: defaultScoring.addressSimilarityThreshold || 0.80,
+    ...options.scoring,
+  };
+
   const duplicateMatches: Array<{ leftIndex: number; rightIndex: number; evaluation: DuplicateEvaluation }> = [];
   const uf = new UnionFind(normalizedRecords.length);
 
   for (const pairKey of pairKeys) {
     const [left, right] = toPairRecords(pairKey, indexMap);
-    const evaluation = evaluateDuplicate(left, right, scoringConfig);
+    const evaluation = evaluateDuplicate(left, right, scoringParams);
 
     if (!evaluation.duplicate) continue;
 
@@ -286,17 +314,29 @@ export async function runRestaurantPipeline(
     return store;
   });
 
+  const duplicateExcludedCount = candidates.length - stores.length;
+
+  const excludeReasonsStats: Record<string, number> = {
+    chain_store: chainExcluded.length,
+    mall_tenant: mallExcluded.length,
+    duplicate: duplicateExcludedCount,
+  };
+
   const result: PipelineResult = {
     summary: {
       inputCount: inputRecords.length,
       normalizedCount: normalizedRecords.length,
       chainExcludedCount: chainExcluded.length,
+      mallExcludedCount: mallExcluded.length,
+      duplicateExcludedCount,
       duplicateClusterCount: [...clusterMap.values()].filter((cluster) => cluster.length > 1).length,
       mergedCount: duplicateMatches.length,
       outputCount: stores.length,
+      excludeReasonsStats,
     },
     stores,
     chainExcluded,
+    mallExcluded,
     duplicateMatches,
   };
 

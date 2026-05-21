@@ -1,5 +1,5 @@
-import { BUSINESS_WORDS } from './constants';
-import type { NormalizeOptions } from './types';
+import { BUSINESS_WORDS } from '../constants';
+import type { NormalizeOptions } from '../types';
 
 function nfkc(value: string): string {
   return value.normalize('NFKC');
@@ -65,8 +65,17 @@ function stripBusinessWords(value: string): string {
   return value.replace(new RegExp(joined, 'gi'), '');
 }
 
+function cleanBrackets(value: string): string {
+  // Replace brackets/parentheses and their content at the end if they look like a branch name, e.g., (南浦和店) -> 南浦和店
+  return value.replace(/[（(]([^）)]+店)[）)]$/, '$1');
+}
+
 function stripBranchSuffix(value: string): string {
-  let current = value;
+  let current = value.trim();
+  // Clean parentheses/brackets surrounding a branch name first
+  current = cleanBrackets(current);
+  
+  // Basic suffix cleanup
   current = current.replace(/(?:本店|支店|総本店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u, '');
 
   const branchPattern = /(?:駅前?|インター|通り?|[東西南北]口|モール)店$/u;
@@ -99,6 +108,9 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
 
   let normalized = nfkc(value).toLowerCase();
   normalized = stripCorporateWords(normalized);
+  
+  // Clean brackets and branch suffixes before stripping other metadata
+  normalized = stripBranchSuffix(normalized);
   
   // スペース、全角スペース、・、-、ー を完全に除去
   normalized = normalized.replace(/[\s　・\-ー]+/g, '');
@@ -135,14 +147,20 @@ function stripBuildingInfo(value: string): string {
   return stripped;
 }
 
-export function normalizeAddress(value: unknown): string {
+export function normalizeAddress(value: unknown, options: { stripPrefecture?: boolean } = {}): string {
   if (typeof value !== 'string' || !value.trim()) return '';
 
   let normalized = nfkc(value);
+  
+  if (options.stripPrefecture) {
+    normalized = normalized.replace(/^(東京都|北海道|京都府|大阪府|[一-龠]{2,3}県)/, '');
+  }
+
   normalized = convertKanjiNumerals(normalized);
   normalized = normalized.replace(/[ー－−‐―]/g, '-');
   normalized = normalized.replace(/([0-9]+)丁目/g, '$1-');
-  normalized = normalized.replace(/([0-9]+)番地?/g, '$1-');
+  normalized = normalized.replace(/([0-9]+)番地?の?/g, '$1-');
+  normalized = normalized.replace(/([0-9]+)の([0-9]+)/g, '$1-$2');
   normalized = normalized.replace(/([0-9]+)号/g, '$1');
   normalized = normalized.replace(/-+/g, '-');
   normalized = stripBuildingInfo(normalized);

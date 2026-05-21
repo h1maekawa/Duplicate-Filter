@@ -17,6 +17,7 @@ export interface PipelineInputRecord {
 
 export interface NormalizeOptions {
   removeBusinessWords?: boolean;
+  stripPrefecture?: boolean;
 }
 
 export interface DecisionLog {
@@ -24,6 +25,7 @@ export interface DecisionLog {
     | 'input'
     | 'normalize'
     | 'chain'
+    | 'mall'
     | 'duplicate'
     | 'merge'
     | 'exclude'
@@ -55,6 +57,13 @@ export interface NormalizedStoreRecord {
   raw: Record<string, unknown>;
   logs: DecisionLog[];
   chainDecision?: ChainDecision;
+  
+  // NEW
+  sourceColumns: string[];        // 元CSVのヘッダーリスト
+  chainScore: number;             // チェーンスコア (0-100)
+  chain_flag: boolean;            // チェーン店フラグ
+  mall_flag: boolean;             // 商業施設フラグ
+  exclude_reason: string[];       // ['duplicate', 'chain_store', 'mall_tenant']
 }
 
 export interface ChainDecision {
@@ -114,21 +123,32 @@ export interface StoreOutputRecord {
     category?: string;
     logs?: DecisionLog[];
   }>;
+
+  // NEW
+  chain_flag: boolean;
+  mall_flag: boolean;
+  exclude_reason: string[];
+  raw: Record<string, unknown>;
 }
 
 export interface PipelineSummary {
   inputCount: number;
   normalizedCount: number;
   chainExcludedCount: number;
+  mallExcludedCount?: number;
+  duplicateExcludedCount?: number;
   duplicateClusterCount: number;
   mergedCount: number;
   outputCount: number;
+  // granular stats
+  excludeReasonsStats?: Record<string, number>;
 }
 
 export interface PipelineResult {
   summary: PipelineSummary;
   stores: StoreOutputRecord[];
   chainExcluded: NormalizedStoreRecord[];
+  mallExcluded?: NormalizedStoreRecord[];
   duplicateMatches: Array<{
     leftIndex: number;
     rightIndex: number;
@@ -156,4 +176,5 @@ export interface PipelineOptions {
   outputPath?: string;
   inputPaths?: string[];
   excludeCommercialFacilities?: boolean;
+  includeExcluded?: boolean;
 }

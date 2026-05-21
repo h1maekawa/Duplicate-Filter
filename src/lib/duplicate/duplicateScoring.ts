@@ -1,7 +1,9 @@
-import { DEFAULT_SCORING_CONFIG } from './constants';
-import { haversineDistanceMeters } from './geo';
-import { bestNameSimilarity, jaroWinkler } from './similarity';
-import type { DuplicateEvaluation, DuplicateScoringConfig, NormalizedStoreRecord } from './types';
+import scoringConfig from '../config/scoring_config.json';
+import { haversineDistanceMeters } from '../utils/geo';
+import { jaroWinkler } from '../utils/similarity';
+import type { DuplicateEvaluation, DuplicateScoringConfig, NormalizedStoreRecord } from '../types';
+
+const defaultScoring = scoringConfig.duplicate;
 
 function getDistance(a: NormalizedStoreRecord, b: NormalizedStoreRecord): number | null {
   if (a.lat == null || a.lng == null || b.lat == null || b.lng == null) return null;
@@ -13,7 +15,20 @@ export function evaluateDuplicate(
   right: NormalizedStoreRecord,
   partialConfig: Partial<DuplicateScoringConfig> = {},
 ): DuplicateEvaluation {
-  const config = { ...DEFAULT_SCORING_CONFIG, ...partialConfig };
+  // Merge config sources: hard defaults -> scoring_config.json -> runtime overrides
+  const config = {
+    phoneMatchScore: defaultScoring.phoneMatchScore || 100,
+    distanceMatchScore: 50,
+    nameSimilarityScore: 40,
+    urlMatchScore: defaultScoring.urlMatchScore || 70,
+    addressSimilarityScore: 20,
+    duplicateThreshold: defaultScoring.duplicateThreshold || 70,
+    distanceThresholdMeters: defaultScoring.distanceThresholdMeters || 30,
+    nameSimilarityThreshold: defaultScoring.nameSimilarityThreshold || 0.85,
+    addressSimilarityThreshold: defaultScoring.addressSimilarityThreshold || 0.80,
+    ...partialConfig,
+  };
+
   const reasons: string[] = [];
   let duplicate = false;
   let score = 0;
@@ -22,31 +37,42 @@ export function evaluateDuplicate(
     left.normalizedPhone && right.normalizedPhone && left.normalizedPhone === right.normalizedPhone,
   );
 
+  const urlMatched = Boolean(
+    left.normalizedUrl && right.normalizedUrl && left.normalizedUrl === right.normalizedUrl,
+  );
+
   const nameSimilarity = jaroWinkler(left.normalizedName, right.normalizedName);
   const addressSimilarity = jaroWinkler(left.normalizedAddress, right.normalizedAddress);
 
-  // Level 1: normalizedPhone が双方に存在し、かつ完全に一致した場合は無条件で重複（duplicate: true）とする。
+  // Level 1: Phone match
   if (phoneMatched) {
     duplicate = true;
-    score = 100;
+    score = config.phoneMatchScore;
     reasons.push('phone_match');
   }
 
-  // Level 2: 電話番号が無くても、normalizedName と normalizedAddress が完全一致した場合は重複とする。
+  // Level 2: URL match
+  if (!duplicate && urlMatched) {
+    duplicate = true;
+    score = config.urlMatchScore;
+    reasons.push('url_match');
+  }
+
+  // Level 3: Name and Address Exact match
   if (!duplicate) {
     const phoneMissing = !left.normalizedPhone || !right.normalizedPhone;
     if (phoneMissing && left.normalizedName === right.normalizedName && left.normalizedAddress === right.normalizedAddress) {
       duplicate = true;
-      score = 90;
+      score = defaultScoring.nameAddressExactScore || 90;
       reasons.push('name_and_address_exact_match');
     }
   }
 
-  // Level 3: 店舗名のJaro-Winkler類似度が 0.85 以上、かつ住所の類似度が 0.80 以上を満たす場合は重複とする。
+  // Level 4: Name similarity and address similarity match
   if (!duplicate) {
-    if (nameSimilarity >= 0.85 && addressSimilarity >= 0.80) {
+    if (nameSimilarity >= config.nameSimilarityThreshold && addressSimilarity >= config.addressSimilarityThreshold) {
       duplicate = true;
-      score = 80;
+      score = defaultScoring.similarityMatchScore || 80;
       reasons.push('similarity_match');
     }
   }
@@ -64,9 +90,9 @@ export function evaluateDuplicate(
     matchedOn: {
       phone: phoneMatched,
       distance: distanceMeters != null && distanceMeters <= config.distanceThresholdMeters,
-      name: nameSimilarity >= 0.85,
-      url: Boolean(left.normalizedUrl && right.normalizedUrl && left.normalizedUrl === right.normalizedUrl),
-      address: addressSimilarity >= 0.80,
+      name: nameSimilarity >= config.nameSimilarityThreshold,
+      url: urlMatched,
+      address: addressSimilarity >= config.addressSimilarityThreshold,
     },
   };
 }

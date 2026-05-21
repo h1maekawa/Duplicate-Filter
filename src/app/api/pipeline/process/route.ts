@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { runRestaurantPipeline } from '../../../../lib/restaurant-pipeline/pipeline';
+import { runRestaurantPipeline, normalizeRow } from '../../../../lib';
 import { parse } from 'csv-parse/sync';
-import { normalizeRow } from '../../../../lib/restaurant-pipeline/io';
 import chainData from '../../../../../data/chains.json';
 
 // export const runtime = 'edge'; // Cloudflare用。ローカル動作優先のため一旦コメントアウト

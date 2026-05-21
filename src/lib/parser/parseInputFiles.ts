@@ -1,9 +1,9 @@
 import { parse } from 'csv-parse/sync';
-import { SOURCE_COLUMN_MAPPINGS, normalizeSourceName } from './constants';
-import { safeNumber } from './normalizers';
-import type { PipelineInputRecord, PipelineOptions, PipelineResult, SourceName } from './types';
+import { SOURCE_COLUMN_MAPPINGS } from '../constants';
+import { safeNumber } from '../normalize/normalizers';
+import { detectSource } from './detectSource';
+import type { PipelineInputRecord, PipelineOptions, PipelineResult } from '../types';
 
-// Edge Runtime かどうかを判定
 const isEdge = process.env.NEXT_RUNTIME === 'edge';
 
 const DEFAULT_MAPPING: Record<string, string[]> = {
@@ -27,11 +27,8 @@ function findValueByMapping(row: Record<string, unknown>, keys: string[]): unkno
   return undefined;
 }
 
-export function normalizeRow(row: Record<string, unknown>, sourceName: string): PipelineInputRecord {
-  const rawSource = row.source || row['媒体'] || row['媒体名'] || row['site'] || row['platform'];
-  const finalSource = String(rawSource ?? sourceName);
-  const normalizedSource = normalizeSourceName(finalSource);
-
+export function normalizeRow(row: Record<string, unknown>, filenameFallback: string): PipelineInputRecord {
+  const normalizedSource = detectSource(row, filenameFallback);
   const mapping = SOURCE_COLUMN_MAPPINGS[normalizedSource] ?? {};
 
   const nameKeys = mapping.name ?? DEFAULT_MAPPING.name;
@@ -46,6 +43,8 @@ export function normalizeRow(row: Record<string, unknown>, sourceName: string): 
   const lngKeys = DEFAULT_MAPPING.lng;
   const areaKeys = DEFAULT_MAPPING.area;
 
+  const sourceColumns = Object.keys(row);
+
   return {
     ...row,
     name: String(findValueByMapping(row, nameKeys) ?? '').trim(),
@@ -59,6 +58,8 @@ export function normalizeRow(row: Record<string, unknown>, sourceName: string): 
     category: String(findValueByMapping(row, categoryKeys) ?? '').trim(),
     businessHours: String(findValueByMapping(row, businessHoursKeys) ?? '').trim(),
     regularHoliday: String(findValueByMapping(row, regularHolidayKeys) ?? '').trim(),
+    sourceColumns,
+    raw: { ...row },
   };
 }
 
@@ -66,7 +67,7 @@ export async function loadInputFile(filePath: string): Promise<PipelineInputReco
   if (isEdge) throw new Error('File system access is not supported in Edge Runtime.');
   const { readFile } = await import('node:fs/promises');
   const path = await import('node:path');
-  
+
   const rawText = await readFile(filePath, 'utf8');
   const ext = path.extname(filePath).toLowerCase();
   const filename = path.basename(filePath);
@@ -98,7 +99,7 @@ export async function loadInputFiles(filePaths: string[]): Promise<PipelineInput
 }
 
 export async function loadChainDatabase(filePath: string): Promise<string[]> {
-  if (isEdge) return []; // Edge ではパス指定でのロードは行わない（インポートを使用）
+  if (isEdge) return [];
   const { readFile } = await import('node:fs/promises');
   const path = await import('node:path');
 

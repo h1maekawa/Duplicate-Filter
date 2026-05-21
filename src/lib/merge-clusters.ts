@@ -1,6 +1,6 @@
 import { SOURCE_PRIORITY } from './constants';
-import { buildStoreId } from './hash';
-import { createLog } from './log';
+import { buildStoreId } from './utils/hash';
+import { createLog } from './utils/log';
 import type { DuplicateEvaluation, NormalizedStoreRecord, SourceName, StoreOutputRecord } from './types';
 
 function sourceRank(source: SourceName): number {
@@ -37,7 +37,7 @@ function chooseBestString(records: NormalizedStoreRecord[], picker: (record: Nor
 function selectBestRecordForField(
   records: NormalizedStoreRecord[],
   priority: string[],
-  hasValue: (record: NormalizedStoreRecord) => boolean
+  hasValue: (record: NormalizedStoreRecord) => boolean,
 ): NormalizedStoreRecord | null {
   for (const source of priority) {
     const matched = records.find((r) => r.source === source && hasValue(r));
@@ -170,6 +170,16 @@ export function mergeCluster(
   const name = nameRecord ? nameRecord.rawName : primary.rawName;
   const normalizedName = nameRecord ? nameRecord.normalizedName : primary.normalizedName;
 
+  // Set exclude reason for non-primary records in the cluster
+  for (const r of records) {
+    if (r.recordIndex !== primary.recordIndex) {
+      if (!r.exclude_reason) r.exclude_reason = [];
+      if (!r.exclude_reason.includes('duplicate')) {
+        r.exclude_reason.push('duplicate');
+      }
+    }
+  }
+
   return {
     storeId: buildStoreId([
       normalizedName,
@@ -191,7 +201,7 @@ export function mergeCluster(
     category,
     businessHours,
     regularHoliday,
-    isChain: records.some((item) => item.chainDecision?.isChain),
+    isChain: records.some((item) => item.chain_flag),
     duplicateChecked: true,
     duplicateScore,
     logs,
@@ -208,5 +218,10 @@ export function mergeCluster(
       regularHoliday: record.regularHoliday,
       logs: record.logs,
     })),
+    // NEW
+    chain_flag: records.some((item) => item.chain_flag),
+    mall_flag: records.some((item) => item.mall_flag),
+    exclude_reason: [...new Set(records.flatMap((item) => item.exclude_reason || []))],
+    raw: primary.raw || {},
   };
 }

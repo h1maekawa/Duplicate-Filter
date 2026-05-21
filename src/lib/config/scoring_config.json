@@ -1,0 +1,27 @@
+{
+  "duplicate": {
+    "phoneMatchScore": 100,
+    "nameAddressExactScore": 90,
+    "similarityMatchScore": 80,
+    "urlMatchScore": 70,
+    "nameSimilarityThreshold": 0.85,
+    "addressSimilarityThreshold": 0.80,
+    "duplicateThreshold": 70,
+    "distanceThresholdMeters": 30
+  },
+  "chain": {
+    "exactMatchScore": 70,
+    "partialMatchScore": 50,
+    "similarityMatchScore": 40,
+    "similarityThreshold": 0.94,
+    "urlPatternScore": 20,
+    "occurrenceScore": 30,
+    "nameSuffixScore": 10,
+    "highReviewScore": 20,
+    "mediumReviewScore": 10,
+    "highReviewThreshold": 500,
+    "mediumReviewThreshold": 200,
+    "occurrenceThreshold": 5,
+    "chainScoreThreshold": 60
+  }
+}

@@ -1,4 +1,4 @@
-import type { DecisionLog } from './types';
+import type { DecisionLog } from '../types';
 
 export function createLog(
   stage: DecisionLog['stage'],

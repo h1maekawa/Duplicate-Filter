@@ -1,16 +1,22 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { createChainMatcher } from '../chain-detection';
-import { evaluateDuplicate } from '../duplicate-scoring';
-import { normalizeAddress, normalizeName, normalizePhone } from '../normalizers';
-import { runRestaurantPipeline } from '../pipeline';
+import {
+  createChainMatcher,
+  evaluateDuplicate,
+  normalizeAddress,
+  normalizeName,
+  normalizePhone,
+  runRestaurantPipeline,
+} from '../index';
 import type { NormalizedStoreRecord } from '../types';
 
 test('normalize functions should align restaurant text', () => {
-  assert.equal(normalizeName('焼肉 大将 渋谷店'), '焼肉大将渋谷');
+  // stripBranchSuffix is now enabled, so '渋谷店' is stripped completely
+  assert.equal(normalizeName('焼肉 大将 渋谷店'), '焼肉大将');
   assert.equal(normalizePhone('03-1234-5678'), '0312345678');
   assert.equal(normalizeAddress('東京都渋谷区道玄坂一丁目2番3号 渋谷ビル 3F'), '東京都渋谷区道玄坂1-2-3');
+  assert.equal(normalizeAddress('東京都渋谷区道玄坂一丁目2番3号 渋谷ビル 3F', { stripPrefecture: true }), '渋谷区道玄坂1-2-3');
 });
 
 test('chain matcher should avoid generic words and match known chain', () => {
@@ -33,8 +39,13 @@ test('chain matcher should avoid generic words and match known chain', () => {
     category: '',
     businessHours: '',
     regularHoliday: '',
+    sourceColumns: [],
     raw: {},
     logs: [],
+    chainScore: 0,
+    chain_flag: false,
+    mall_flag: false,
+    exclude_reason: [],
   } satisfies NormalizedStoreRecord;
 
   const genericRecord = {
@@ -45,11 +56,12 @@ test('chain matcher should avoid generic words and match known chain', () => {
     logs: [],
   } satisfies NormalizedStoreRecord;
 
-  const chainDecision = matcher.detect(chainRecord);
-  const genericDecision = matcher.detect(genericRecord);
+  const chainDecision = matcher.detect(chainRecord, new Set());
+  const genericDecision = matcher.detect(genericRecord, new Set());
 
+  // Since '渋谷店' is stripped, the normalized name matches '鳥貴族' exactly.
   assert.equal(chainDecision.isChain, true);
-  assert.equal(chainDecision.matchType, 'partial');
+  assert.equal(chainDecision.matchType, 'exact');
   assert.equal(genericDecision.isChain, false);
 });
 
@@ -94,7 +106,7 @@ test('duplicate scoring should prioritize phone number and merge by score', asyn
       scoring: {
         duplicateThreshold: 80,
       },
-      chainDbPath: new URL('../../../../data/chains.json', import.meta.url).pathname,
+      chainDbPath: new URL('../../../data/chains.json', import.meta.url).pathname,
     },
   );
 
@@ -123,8 +135,13 @@ test('evaluateDuplicate should return score log details', () => {
     category: '',
     businessHours: '',
     regularHoliday: '',
+    sourceColumns: [],
     raw: {},
     logs: [],
+    chainScore: 0,
+    chain_flag: false,
+    mall_flag: false,
+    exclude_reason: [],
   };
 
   const evaluation = evaluateDuplicate(base, {
@@ -132,6 +149,16 @@ test('evaluateDuplicate should return score log details', () => {
     recordIndex: 1,
     normalizedName: '鳥一郎',
     normalizedUrl: 'https://example.com/a',
+  }, {
+    phoneMatchScore: 100,
+    distanceMatchScore: 50,
+    nameSimilarityScore: 40,
+    urlMatchScore: 70,
+    addressSimilarityScore: 20,
+    duplicateThreshold: 70,
+    distanceThresholdMeters: 30,
+    nameSimilarityThreshold: 0.85,
+    addressSimilarityThreshold: 0.80,
   });
 
   assert.equal(evaluation.duplicate, true);
@@ -175,14 +202,14 @@ test('pipeline should exclude Aeon Mall restaurants ONLY for rocketnow and menu 
   // - Item 4: Lalaport (non-Aeon Mall) + menu -> Not excluded (kept in candidates/output)
 
   assert.equal(result.summary.inputCount, 4);
-  assert.equal(result.chainExcluded.length, 2);
+  assert.equal(result.mallExcluded.length, 2);
   assert.equal(result.stores.length, 2);
 
   // Check that the excluded records are the correct ones
-  const isAeonExcluded1 = result.chainExcluded.some(
+  const isAeonExcluded1 = result.mallExcluded.some(
     r => r.rawName === '個人レストラン イオンモール店' && r.source === 'rocketnow'
   );
-  const isAeonExcluded2 = result.chainExcluded.some(
+  const isAeonExcluded2 = result.mallExcluded.some(
     r => r.rawName === 'カフェ メニューテスト' && r.source === 'menu'
   );
 
@@ -190,7 +217,7 @@ test('pipeline should exclude Aeon Mall restaurants ONLY for rocketnow and menu 
   assert.ok(isAeonExcluded2);
   
   // Verify that the logs record the exclusion reason
-  const aeonLog = result.chainExcluded[0].logs.find(l => l.code === 'excluded_aeon_mall');
+  const aeonLog = result.mallExcluded[0].logs.find(l => l.code === 'excluded_aeon_mall');
   assert.ok(aeonLog);
   assert.equal(aeonLog.message, 'イオンモール除外（ロケットナウ・メニュー案件）');
 });
@@ -217,16 +244,15 @@ test('pipeline should completely exclude commercial facilities when option is en
     }
   ], {
     excludeCommercialFacilities: true,
-    chainDbPath: new URL('../../../../data/chains.json', import.meta.url).pathname,
+    chainDbPath: new URL('../../../data/chains.json', import.meta.url).pathname,
   });
 
   assert.equal(result.summary.inputCount, 3);
-  assert.equal(result.chainExcluded.length, 2);
+  assert.equal(result.mallExcluded.length, 2);
   assert.equal(result.stores.length, 1);
   assert.equal(result.stores[0].name, '一般店舗');
 
-  const commLog = result.chainExcluded[0].logs.find(l => l.code === 'excluded_commercial_facility');
+  const commLog = result.mallExcluded[0].logs.find(l => l.code === 'excluded_commercial_facility');
   assert.ok(commLog);
   assert.equal(commLog.message, '商業施設内店舗除外');
 });
-

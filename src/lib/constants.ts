@@ -64,8 +64,8 @@ export const SOURCE_COLUMN_MAPPINGS: Record<string, Record<string, string[]>> = 
     category: ['genre'],
     address: ['address'],
     businessHours: ['raw_business_hours'],
-    regularHoliday: ['raw_business_hours'], // 食べログは同一列から抽出するため
-    url: ['url']
+    regularHoliday: ['raw_business_hours'],
+    url: ['url'],
   },
   hotpepper: {
     name: ['name'],
@@ -73,8 +73,8 @@ export const SOURCE_COLUMN_MAPPINGS: Record<string, Record<string, string[]>> = 
     category: ['genre'],
     address: ['address'],
     businessHours: ['raw_business_hours'],
-    regularHoliday: ['raw_business_hours'], // ホットペッパーも同一列から抽出するため
-    url: ['url']
+    regularHoliday: ['raw_business_hours'],
+    url: ['url'],
   },
   google: {
     name: ['name'],
@@ -83,8 +83,8 @@ export const SOURCE_COLUMN_MAPPINGS: Record<string, Record<string, string[]>> = 
     address: ['address'],
     businessHours: ['opening_hours_details'],
     regularHoliday: ['regular_holiday'],
-    url: ['url']
-  }
+    url: ['url'],
+  },
 };
 
 export function normalizeSourceName(value: string): SourceName {

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { generateExcelBlob } from '../../lib/restaurant-pipeline/excel-exporter';
-import { generateCsvContent } from '../../lib/restaurant-pipeline/csv-exporter';
+import { generateExcelBlob } from '../../lib/export/excelExporter';
+import { generateCsvContent } from '../../lib/export/csvExporter';
 
 export default function PipelinePage() {
   const [files, setFiles] = useState<File[]>([]);
