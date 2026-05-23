@@ -10,43 +10,31 @@ function collapseSpaces(value: string): string {
 }
 
 function removeSymbols(value: string): string {
-  return value.replace(/[【】\[\]()（）<>「」『』'"`’“”.,，、。!！?？:：;；~〜·・/\\|]/g, '');
+  return value.replace(/[【】\[\]()（）<>「」『』'"`'"".,，、。!！?？:：;；~〜·・/\\|]/g, '');
 }
 
 function convertKanjiNumerals(value: string): string {
   const digits: Record<string, number> = {
-    〇: 0,
-    一: 1,
-    二: 2,
-    三: 3,
-    四: 4,
-    五: 5,
-    六: 6,
-    七: 7,
-    八: 8,
-    九: 9,
+    〇: 0, 一: 1, 二: 2, 三: 3, 四: 4,
+    五: 5, 六: 6, 七: 7, 八: 8, 九: 9,
   };
 
   const parseChunk = (chunk: string): string => {
     let rest = chunk;
     let total = 0;
-
     if (rest.includes('百')) {
       const [left, right] = rest.split('百');
       total += (left ? digits[left] : 1) * 100;
       rest = right ?? '';
     }
-
     if (rest.includes('十')) {
       const [left, right] = rest.split('十');
       total += (left ? digits[left] : 1) * 10;
       rest = right ?? '';
     }
-
     if (rest) {
       total += digits[rest] ?? Number(rest);
     }
-
     return String(total);
   };
 
@@ -66,20 +54,30 @@ function stripBusinessWords(value: string): string {
 }
 
 function cleanBrackets(value: string): string {
-  // Replace brackets/parentheses and their content at the end if they look like a branch name, e.g., (南浦和店) -> 南浦和店
   return value.replace(/[（(]([^）)]+店)[）)]$/, '$1');
 }
 
+/**
+ * 【修正】店名の支店サフィックスを除去する。
+ * - 安全ガード: 除去後に2文字未満になる場合は除去しない
+ * - 誤作動防止: 元の文字列が短すぎる場合はそのまま返す
+ */
 function stripBranchSuffix(value: string): string {
   let current = value.trim();
-  // Clean parentheses/brackets surrounding a branch name first
+
+  // 安全ガード: 4文字未満は支店パターン除去を試みない（「本店」「支店」等の誤削除防止）
+  if (current.length < 4) return current;
+
   current = cleanBrackets(current);
-  
-  // Basic suffix cleanup
-  current = current.replace(/(?:本店|支店|総本店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u, '');
+
+  // 固定パターン（本店・支店等）を除去、ただし除去後2文字以上あること
+  const fixedSuffixes = /(?:総本店|本店|支店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u;
+  const afterFixed = current.replace(fixedSuffixes, '');
+  if (afterFixed.length >= 2) current = afterFixed;
 
   const branchPattern = /(?:駅前?|インター|通り?|[東西南北]口|モール)店$/u;
-  current = current.replace(branchPattern, '');
+  const afterBranch = current.replace(branchPattern, '');
+  if (afterBranch.length >= 2) current = afterBranch;
 
   if (current.endsWith('店')) {
     const chars = Array.from(current);
@@ -88,11 +86,13 @@ function stripBranchSuffix(value: string): string {
       if (chars.length <= bodyLength + 1) break;
       const suffixBody = chars.slice(-(bodyLength + 1), -1).join('');
       const prefix = chars.slice(0, -(bodyLength + 1)).join('');
+      // 安全ガード: ブランド名が2文字以上残ること
       if (prefix.length >= 2 && locationHint.test(suffixBody)) {
         return prefix;
       }
     }
 
+    // 「〇〇店」形式: ブランド名が2文字以上残ることを確認してから除去
     const simpleCityPattern = /([一-龠ァ-ヶー]{2,4})店$/u;
     const match = current.match(simpleCityPattern);
     if (match && current.length - match[0].length >= 2) {
@@ -108,16 +108,18 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
 
   let normalized = nfkc(value).toLowerCase();
   normalized = stripCorporateWords(normalized);
-  
-  // Clean brackets and branch suffixes before stripping other metadata
   normalized = stripBranchSuffix(normalized);
-  
-  // スペース、全角スペース、・、-、ー を完全に除去
+
+  // スペース・全角スペース・記号類を除去
   normalized = normalized.replace(/[\s　・\-ー]+/g, '');
   normalized = removeSymbols(normalized);
-  
-  // 本店, 支店, 号店, 店, 階, F を完全に除去
-  normalized = normalized.replace(/(本店|支店|号店|店|階|[Ff])/g, '');
+
+  // 本店, 支店, 号店, 店, 階, F を除去（残存分）
+  // ただし2文字以上残る場合のみ
+  const afterStoreSuffix = normalized.replace(/(本店|支店|号店|店|階|[Ff])/g, '');
+  if (afterStoreSuffix.length >= 2) {
+    normalized = afterStoreSuffix;
+  }
 
   if (options.removeBusinessWords) {
     normalized = stripBusinessWords(normalized).replace(/[\s　]+/g, '');
@@ -126,23 +128,38 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
   return normalized.trim();
 }
 
+/**
+ * 【修正】電話番号を正規化する。
+ * - +81 (国際表記) を先頭の 0 に変換してから処理
+ * - 10桁・11桁のみ有効とする
+ */
 export function normalizePhone(value: unknown): string {
   if (value == null) return '';
-  // 記号やハイフンを完全に除去し、純粋な数字のみにする
-  const normalized = nfkc(String(value)).replace(/\D/g, '');
-  if (normalized.length !== 10 && normalized.length !== 11) {
+
+  let raw = nfkc(String(value)).trim();
+
+  // +81 国際表記 → 先頭 0 に変換（例: +81-3-1234-5678 → 0312345678）
+  // +81 または 0081 で始まる場合
+  raw = raw.replace(/^\+81[-\s]?/, '0');
+  raw = raw.replace(/^0081[-\s]?/, '0');
+
+  // 数字のみ抽出
+  const digits = raw.replace(/\D/g, '');
+
+  if (digits.length !== 10 && digits.length !== 11) {
     return '';
   }
-  return normalized;
+
+  return digits;
 }
 
 function stripBuildingInfo(value: string): string {
   let stripped = value;
-  // 1. 末尾の階数（〇階、〇F、地下〇階など）を除去
+  // 末尾の階数表現を除去
   stripped = stripped.replace(/(?:\s|　)*(?:[0-9一二三四五六七八九十]+F|[0-9一二三四五六七八九十]+階|B[0-9一二三四五六七八九十]+|B[0-9一二三四五六七八九十]+F|地下[0-9一二三四五六七八九十]+階|地下[0-9一二三四五六七八九十]+F?)(?:\s|　)*$/gi, '');
-  // 2. 末尾のビル名・建物名（スペースあり）を除去
+  // 末尾のビル名（スペースあり）を除去
   stripped = stripped.replace(/(?:\s|　)+.*(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー|アパート|コート|レジデンス|メゾン|プラザ).*$/gi, '');
-  // 3. 番地の直後に続くビル名（スペースなし）を除去
+  // 番地直後のビル名（スペースなし）を除去
   stripped = stripped.replace(/(?<=[0-9])(?:\s|　)*[^\d\s\-\u30FC\uFF0D\u2212\u2010\u2015]+(?:ビル|bldg|building|マンション|ハイツ|コーポ|タワー|アパート|コート|レジデンス|メゾン|プラザ).*$/gi, '');
   return stripped;
 }
@@ -151,7 +168,7 @@ export function normalizeAddress(value: unknown, options: { stripPrefecture?: bo
   if (typeof value !== 'string' || !value.trim()) return '';
 
   let normalized = nfkc(value);
-  
+
   if (options.stripPrefecture) {
     normalized = normalized.replace(/^(東京都|北海道|京都府|大阪府|[一-龠]{2,3}県)/, '');
   }

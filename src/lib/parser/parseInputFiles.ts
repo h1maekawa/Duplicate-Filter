@@ -72,22 +72,50 @@ export async function loadInputFile(filePath: string): Promise<PipelineInputReco
   const ext = path.extname(filePath).toLowerCase();
   const filename = path.basename(filePath);
 
+  if (!rawText.trim()) {
+    console.warn(`[parseInputFiles] Empty file: ${filePath}`);
+    return [];
+  }
+
   if (ext === '.json') {
-    const parsed = JSON.parse(rawText);
-    const items = Array.isArray(parsed) ? parsed : Array.isArray(parsed.records) ? parsed.records : [];
-    return items.map((row: unknown) => normalizeRow(row as Record<string, unknown>, filename));
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (e) {
+      throw new Error(`JSON parse error in ${filename}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    const items = Array.isArray(parsed)
+      ? parsed
+      : (parsed as Record<string, unknown> | null) && Array.isArray((parsed as Record<string, unknown>).records)
+        ? ((parsed as Record<string, unknown>).records as unknown[])
+        : [];
+    return (items as Record<string, unknown>[])
+      .map((row) => normalizeRow(row, filename))
+      .filter((r) => r.name && String(r.name).trim());
   }
 
   if (ext === '.csv') {
-    const records = parse(rawText, {
-      columns: true,
-      skip_empty_lines: true,
-      bom: true,
-      relax_column_count: true,
-      trim: true,
-    }) as Record<string, unknown>[];
+    let records: Record<string, unknown>[];
+    try {
+      records = parse(rawText, {
+        columns: true,
+        skip_empty_lines: true,
+        bom: true,
+        relax_column_count: true,
+        trim: true,
+      }) as Record<string, unknown>[];
+    } catch (e) {
+      throw new Error(`CSV parse error in ${filename}: ${e instanceof Error ? e.message : String(e)}`);
+    }
 
-    return records.map((row) => normalizeRow(row, filename));
+    if (records.length === 0) {
+      console.warn(`[parseInputFiles] No data rows in: ${filePath}`);
+      return [];
+    }
+
+    return records
+      .map((row) => normalizeRow(row, filename))
+      .filter((r) => r.name && String(r.name).trim());
   }
 
   throw new Error(`Unsupported input format: ${filePath}`);

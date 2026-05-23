@@ -1,4 +1,5 @@
 import chainBrandsConfig from '../config/chain_brands.json';
+import scoringConfig from '../config/scoring_config.json';
 import { createLog } from '../utils/log';
 import { normalizeName } from '../normalize/normalizers';
 import { jaroWinkler } from '../utils/similarity';
@@ -7,6 +8,8 @@ import type { ChainDecision, NormalizeOptions, NormalizedStoreRecord } from '../
 export interface ChainMatcher {
   detect(record: NormalizedStoreRecord, heavyBrands: Set<string>): ChainDecision;
 }
+
+const chainConfig = scoringConfig.chain;
 
 const CHAIN_URL_PATTERNS = ['/company/', '/shop/', '/brand/', '/store/', '/chain/'];
 
@@ -19,18 +22,11 @@ function hasChainUrlPattern(url: string): boolean {
 function hasBranchSuffixPattern(rawName: string): boolean {
   if (!rawName) return false;
   const clean = rawName.trim();
-  if (/(?:本店|支店|総本店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u.test(clean)) {
-    return true;
-  }
-  const branchPattern = /(?:駅前?|インター|通り?|[東西南北]口|モール)店$/u;
-  if (branchPattern.test(clean)) {
-    return true;
-  }
+  if (/(?:本店|支店|総本店|本館|別館|新館|駅前店|[東西南北]口店|[0-9]+号店)$/u.test(clean)) return true;
+  if (/(?:駅前?|インター|通り?|[東西南北]口|モール)店$/u.test(clean)) return true;
   if (clean.endsWith('店')) {
     const locationHint = /(駅|口|丁目|通|町|市|区|郡|県|都|府|谷|坂|川|前|橋|丘|島|北|南|東|西|モール|プラザ|パーク)$/u;
-    if (locationHint.test(clean.slice(0, -1))) {
-      return true;
-    }
+    if (locationHint.test(clean.slice(0, -1))) return true;
   }
   return false;
 }
@@ -42,9 +38,7 @@ function getReviewCount(raw: Record<string, unknown>): number {
     const foundKey = Object.keys(raw).find((k) => k.trim().toLowerCase() === key.trim().toLowerCase());
     if (foundKey) {
       const val = Number(raw[foundKey]);
-      if (Number.isFinite(val)) {
-        return val;
-      }
+      if (Number.isFinite(val)) return val;
     }
   }
   return 0;
@@ -74,10 +68,12 @@ export function createChainMatcher(
   chainNames: string[] = [],
   normalizeOptions: NormalizeOptions = {},
 ): ChainMatcher {
-  // Combine config brands and optionally passed brand names
   const masterBrands = [...new Set([...chainBrandsConfig.brands, ...chainNames])];
   const normalizedChains = [...new Set(masterBrands.map((name) => normalizeName(name, normalizeOptions)).filter(Boolean))];
   const genericChainWords = new Set(chainBrandsConfig.genericWords);
+
+  // スコア閾値 (JSON から参照)
+  const threshold = chainConfig.chainScoreThreshold || 60;
 
   return {
     detect(record: NormalizedStoreRecord, heavyBrands: Set<string>): ChainDecision {
@@ -85,12 +81,7 @@ export function createChainMatcher(
       if (!target) {
         record.chainScore = 0;
         record.chain_flag = false;
-        return {
-          isChain: false,
-          matchedChainName: null,
-          matchType: 'none',
-          reasons: ['empty_name'],
-        };
+        return { isChain: false, matchedChainName: null, matchType: 'none', reasons: ['empty_name'] };
       }
 
       let chainScore = 0;
@@ -99,7 +90,7 @@ export function createChainMatcher(
       let matchType: ChainDecision['matchType'] = 'none';
       let maxSimilarity = 0;
 
-      // 1. Exact Match
+      // 1. 完全一致: スコア 70（単独で閾値 60 を超え、チェーン確定）
       let isExact = false;
       for (const chainName of normalizedChains) {
         if (target === chainName) {
@@ -110,11 +101,13 @@ export function createChainMatcher(
       }
 
       if (isExact) {
-        chainScore += 70;
+        chainScore += chainConfig.exactMatchScore || 70;
         matchType = 'exact';
         reasons.push('exact_brand_match');
       } else {
-        // 2. Partial Match
+        // 2. 部分一致
+        // 【修正】スコアを JSON 参照値 (45) に変更（旧: ハードコード 65）
+        // 単独では閾値 60 を超えないので、他のシグナル（高出現頻度・URL等）と組み合わせて判定
         let isPartial = false;
         for (const chainName of normalizedChains) {
           if (genericChainWords.has(chainName)) continue;
@@ -126,12 +119,11 @@ export function createChainMatcher(
         }
 
         if (isPartial) {
-          // 公式チェーンDBへの部分一致は確度が高い → しきい値(60)を単独で超えるスコアを付与
-          chainScore += 65;
+          chainScore += chainConfig.partialMatchScore || 45;
           matchType = 'partial';
           reasons.push('partial_brand_match');
         } else {
-          // 3. Similarity Match
+          // 3. 類似度マッチ
           let bestSimilar: string | null = null;
           for (const chainName of normalizedChains) {
             if (genericChainWords.has(chainName)) continue;
@@ -141,44 +133,45 @@ export function createChainMatcher(
               bestSimilar = chainName;
             }
           }
-          if (maxSimilarity >= 0.94 && bestSimilar) {
+          const simThreshold = chainConfig.similarityThreshold || 0.94;
+          if (maxSimilarity >= simThreshold && bestSimilar) {
             matchType = 'similar';
             matchedChainName = bestSimilar;
-            chainScore += 40;
+            chainScore += chainConfig.similarityMatchScore || 40;
             reasons.push(`similar_brand_match (${maxSimilarity.toFixed(2)})`);
           }
         }
       }
 
-      // 4. URL Pattern Match
+      // 4. URL パターン
       if (record.url && hasChainUrlPattern(record.url)) {
-        chainScore += 20;
+        chainScore += chainConfig.urlPatternScore || 20;
         reasons.push('chain_url_pattern');
       }
 
-      // 5. Heavy brand frequency occurrence
+      // 5. 高頻度出現ブランド
       if (heavyBrands.has(target)) {
-        chainScore += 30;
+        chainScore += chainConfig.occurrenceScore || 30;
         reasons.push('high_frequency_name');
       }
 
-      // 6. Suffix location patterns
+      // 6. 支店サフィックスパターン
       if (hasBranchSuffixPattern(record.rawName)) {
-        chainScore += 10;
+        chainScore += chainConfig.nameSuffixScore || 10;
         reasons.push('branch_suffix_pattern');
       }
 
-      // 7. Review score check
+      // 7. 口コミ数
       const reviews = getReviewCount(record.raw);
-      if (reviews >= 500) {
-        chainScore += 20;
+      if (reviews >= (chainConfig.highReviewThreshold || 500)) {
+        chainScore += chainConfig.highReviewScore || 20;
         reasons.push('reviews_500_plus');
-      } else if (reviews >= 200) {
-        chainScore += 10;
+      } else if (reviews >= (chainConfig.mediumReviewThreshold || 200)) {
+        chainScore += chainConfig.mediumReviewScore || 10;
         reasons.push('reviews_200_plus');
       }
 
-      const chain_flag = chainScore >= 60;
+      const chain_flag = chainScore >= threshold;
       record.chainScore = chainScore;
       record.chain_flag = chain_flag;
 
