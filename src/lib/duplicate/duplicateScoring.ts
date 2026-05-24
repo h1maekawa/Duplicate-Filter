@@ -50,7 +50,7 @@ export function evaluateDuplicate(
     urlMatchScore: defaultScoring.urlMatchScore || 70,
     addressSimilarityScore: 20,
     duplicateThreshold: defaultScoring.duplicateThreshold || 70,
-    // 【修正】GPS誤差を考慮して80mに緩和（旧: 30m）
+    // GPS誤差(媒体間ズレ平均50〜100m)を吸収するため80mに設定
     distanceThresholdMeters: defaultScoring.distanceThresholdMeters || 80,
     nameSimilarityThreshold: defaultScoring.nameSimilarityThreshold || 0.85,
     addressSimilarityThreshold: defaultScoring.addressSimilarityThreshold || 0.80,
@@ -140,7 +140,7 @@ export function evaluateDuplicate(
     }
   }
 
-  return {
+  const evaluation = {
     pairKey: `${Math.min(left.recordIndex, right.recordIndex)}:${Math.max(left.recordIndex, right.recordIndex)}`,
     duplicate,
     score,
@@ -156,4 +156,17 @@ export function evaluateDuplicate(
       address: addressSimilarity >= config.addressSimilarityThreshold,
     },
   };
+
+  // デバッグログ: 重複ペアの詳細
+  if (process.env.DEBUG_PIPELINE === 'true' && duplicate) {
+    console.log('[DUPLICATE DEBUG]', {
+      normalizedName: `${left.normalizedName} ↔ ${right.normalizedName}`,
+      duplicateKey: evaluation.pairKey,
+      distance: evaluation.distanceMeters,
+      nameSimilarity: evaluation.nameSimilarity,
+      reasons: evaluation.reasons,
+    });
+  }
+
+  return evaluation;
 }

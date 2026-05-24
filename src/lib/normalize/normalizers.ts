@@ -110,8 +110,8 @@ export function normalizeName(value: unknown, options: NormalizeOptions = {}): s
   normalized = stripCorporateWords(normalized);
   normalized = stripBranchSuffix(normalized);
 
-  // スペース・全角スペース・記号類を除去
-  normalized = normalized.replace(/[\s　・\-ー]+/g, '');
+  // スペース・全角スペース・記号類を除去（長音符「ー」は除外：スターバックス等の判定精度のため）
+  normalized = normalized.replace(/[\s　・\-]+/g, '');
   normalized = removeSymbols(normalized);
 
   // 本店, 支店, 号店, 店, 階, F を除去（残存分）

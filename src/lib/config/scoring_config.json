@@ -7,11 +7,11 @@
     "nameSimilarityThreshold": 0.85,
     "addressSimilarityThreshold": 0.80,
     "duplicateThreshold": 70,
-    "distanceThresholdMeters": 30
+    "distanceThresholdMeters": 80
   },
   "chain": {
     "exactMatchScore": 70,
-    "partialMatchScore": 50,
+    "partialMatchScore": 65,
     "similarityMatchScore": 40,
     "similarityThreshold": 0.94,
     "urlPatternScore": 20,

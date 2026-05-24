@@ -107,7 +107,8 @@ function buildCandidatePairKeys(records: NormalizedStoreRecord[]): string[] {
     }
 
     if (record.normalizedName.length >= 4) {
-      const key = `name:${record.normalizedName.slice(0, 6)}`;
+      // prefix 4文字: 6文字だと「ドトールコーヒー」系派生が別ブロックになる問題を緩和
+      const key = `name:${record.normalizedName.slice(0, 4)}`;
       nameBlocks.set(key, [...(nameBlocks.get(key) ?? []), record.recordIndex]);
     }
 
@@ -241,6 +242,19 @@ export async function runRestaurantPipeline(
       excluded = true;
     }
 
+    // デバッグログ: 判定結果を確認しやすくする
+    if (process.env.DEBUG_PIPELINE === 'true') {
+      console.log('[PIPELINE DEBUG]', {
+        normalizedName: record.normalizedName,
+        normalizedPhone: record.normalizedPhone,
+        normalizedAddress: record.normalizedAddress.slice(0, 30),
+        chainMatched: chainDecision.isChain ? chainDecision.matchedChainName : false,
+        chainScore: record.chainScore,
+        mallMatched: record.mall_flag,
+        excluded,
+      });
+    }
+
     if (!excluded) {
       candidates.push(record);
     }
@@ -258,7 +272,7 @@ export async function runRestaurantPipeline(
     urlMatchScore: defaultScoring.urlMatchScore || 70,
     addressSimilarityScore: 20,
     duplicateThreshold: defaultScoring.duplicateThreshold || 70,
-    distanceThresholdMeters: defaultScoring.distanceThresholdMeters || 30,
+    distanceThresholdMeters: defaultScoring.distanceThresholdMeters || 80,
     nameSimilarityThreshold: defaultScoring.nameSimilarityThreshold || 0.85,
     addressSimilarityThreshold: defaultScoring.addressSimilarityThreshold || 0.80,
     ...options.scoring,
